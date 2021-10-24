@@ -32,7 +32,7 @@ class ModelBase(models.Model):
 
 
 class SynchronizedTables(ModelBase):
-    table = models.CharField(max_length=100, verbose_name=_('table'))
+    table = models.CharField(max_length=100, verbose_name=_('table'), unique=True)
     alias = models.CharField(max_length=255, verbose_name=_('alias'))
     data = models.JSONField(default=list)
     show_on_map = models.BooleanField(default=False)
@@ -57,6 +57,9 @@ class DataGroup(ModelBase):
         blank=True,
         null=True
     )
+
+    def __str__(self):
+        return self.description + " (" + str(self.id) + ")"
 
 
 class RelationsTable(ModelBase):

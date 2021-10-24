@@ -1,13 +1,8 @@
 import uuid
-
-from constance.backends.database.models import Constance
-from django.conf import settings
-
 from django.contrib.gis.db import models as geo_models
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin, Group, Permission
 from django.db import models
-from django.db.models.signals import post_save
 from django.utils.functional import cached_property
 from django.utils.translation import ugettext_lazy as _
 
