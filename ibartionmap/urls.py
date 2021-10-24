@@ -40,8 +40,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     # apps
-    # path('api/core/', include('apps.core.urls')),
-    # path('api/setting/', include('apps.setting.urls')),
+    path('api/core/', include('apps.core.urls')),
+    path('api/setting/', include('apps.setting.urls')),
     path('api/security/', include('apps.security.urls')),
 
     # Tokens

@@ -2,10 +2,13 @@ from decimal import Decimal
 from json import JSONEncoder
 from uuid import UUID
 
+import pymysql.cursors
 from constance import config
 from constance.backends.database.models import Constance
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import QuerySet
+
+from apps.setting.models import Connection
 from ibartionmap import settings
 
 
@@ -38,11 +41,11 @@ def get_settings(allow_settings):
                 id = None
                 value = getattr(config, key)
             data = {
-                    'id': id,
-                    'key': key,
-                    'default': default,
-                    'help_text': help_text,
-                    'value': value}
+                'id': id,
+                'key': key,
+                'default': default,
+                'help_text': help_text,
+                'value': value}
             setting_list.append(data)
     return setting_list
 
@@ -177,3 +180,15 @@ def format_headers_import(headers, add_info=None):
             headers[index] = "document_code"
 
     return headers
+
+
+def connect_with_mysql(instance: Connection):
+    connection = pymysql.connect(
+        host=instance.host,
+        user=instance.database_username,
+        password=instance.database_password,
+        database=instance.database_name,
+        port=instance.database_port,
+        cursorclass=pymysql.cursors.DictCursor
+    )
+    return connection
