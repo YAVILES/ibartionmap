@@ -8,7 +8,6 @@ from ibartionmap.utils.functions import connect_with_mysql
 
 @shared_task(name="sync_with_connection")
 def sync_with_connection(connection_id):
-    print(connection_id)
     try:
         instance: Connection = Connection.objects.get(id=connection_id)
         if instance.type == Connection.DB and instance.database_origin == Connection.MySQL:

@@ -12,6 +12,16 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
     table = serializers.CharField(required=True)
 
     def get_data(self, obj: SynchronizedTables):
+        try:
+            relations_table = RelationsTable.objects.filter(table_one__id=obj.id)
+            for relation in relations_table:
+                relation: RelationsTable = relation
+                for d in obj.data:
+                    d[relation.table_two.table] = [d_two for d_two in relation.table_two.data
+                                                   if d[relation.property_table_one] == d_two[relation.property_table_two]]
+
+        except ObjectDoesNotExist:
+            pass
         if obj.show_on_map:
             for d in obj.data:
                 if d[obj.property_longitude] and d[obj.property_latitude]:
