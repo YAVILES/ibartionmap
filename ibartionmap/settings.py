@@ -250,7 +250,7 @@ IMPORT_EXPORT_USE_TRANSACTIONS = True
 CONSTANCE_CONFIG = {}
 
 # CELERY STUFF
-BROKER_URL = 'redis://localhost:6379/0'
+BROKER_URL = 'redis://localhost:6379/4'
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
