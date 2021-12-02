@@ -8,7 +8,7 @@ from celery import Celery
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ibartionmap.settings')
 
 ## Get the base REDIS URL, default to redis' default
-BASE_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379')
+BASE_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 
 app = Celery('ibartionmap')
 

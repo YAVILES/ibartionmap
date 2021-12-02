@@ -40,10 +40,13 @@ class Connection(ModelBase):
     periodic_task = models.ForeignKey(
         PeriodicTask,
         verbose_name=_('periodic task'),
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         blank=True,
         null=True
     )
+    every_interval = models.IntegerField(verbose_name=_('every interval'),  blank=None, default=10)
+    period_interval = models.CharField(max_length=25, verbose_name=_('period interval'),
+                                       default=IntervalSchedule.SECONDS, blank=None)
     is_active = models.BooleanField(verbose_name=_('is active'), default=True)
 
     def __str__(self):
@@ -56,8 +59,11 @@ class Connection(ModelBase):
 def post_save_connection(sender, instance: Connection, **kwargs):
     created = kwargs['created']
     if created:
-        if instance.type == Connection.DB:
-            schedule, created = IntervalSchedule.objects.get_or_create(every=10, period='seconds')
+        if instance.type == Connection.DB and instance.info_to_sync_selected:
+            schedule, created = IntervalSchedule.objects.get_or_create(
+                every=instance.every_interval,
+                period=instance.period_interval
+            )
             periodic_task: PeriodicTask = PeriodicTask.objects.create(
                 interval=schedule,
                 name='Synchronization with connection ' + instance.description,
@@ -68,15 +74,23 @@ def post_save_connection(sender, instance: Connection, **kwargs):
             instance.periodic_task_id = periodic_task.id
             instance.save(update_fields=["periodic_task_id"])
     else:
-        if instance.type == Connection.DB:
+        if instance.type == Connection.DB and instance.info_to_sync_selected:
             try:
                 periodic_task: PeriodicTask = PeriodicTask.objects.get(
                     id=instance.periodic_task_id
                 )
+                schedule, created = IntervalSchedule.objects.get_or_create(
+                    every=instance.every_interval,
+                    period=instance.period_interval
+                )
+                periodic_task.interval = schedule
                 periodic_task.enabled = instance.is_active
-                periodic_task.save(update_fields=['enabled'])
+                periodic_task.save(update_fields=['enabled', 'interval'])
             except ObjectDoesNotExist:
-                schedule, created = IntervalSchedule.objects.get_or_create(every=1, period='seconds')
+                schedule, created = IntervalSchedule.objects.get_or_create(
+                    every=instance.every_interval,
+                    period=instance.period_interval
+                )
                 periodic_task = PeriodicTask.objects.create(
                     interval=schedule,
                     name='Synchronization with connection ' + instance.description,
@@ -86,3 +100,6 @@ def post_save_connection(sender, instance: Connection, **kwargs):
                 )
                 instance.periodic_task_id = periodic_task.id
                 instance.save(update_fields=["periodic_task_id"])
+
+
+post_save.connect(post_save_connection, sender=Connection)

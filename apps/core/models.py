@@ -77,3 +77,6 @@ class RelationsTable(ModelBase):
     )
     property_table_one = models.CharField(max_length=100, verbose_name=_('property table one'))
     property_table_two = models.CharField(max_length=100, verbose_name=_('property table two'))
+
+    def __str__(self):
+        return self.table_one.table + " - " + self.table_two.table

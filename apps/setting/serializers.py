@@ -11,8 +11,8 @@ class InfoToSyncSerializer(serializers.Serializer):
 
 
 class ConnectionDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
-    info_to_sync = InfoToSyncSerializer(many=True)
-    info_to_sync_selected = InfoToSyncSerializer(many=True)
+    info_to_sync = InfoToSyncSerializer(many=True, required=False)
+    info_to_sync_selected = InfoToSyncSerializer(many=True, required=False)
 
     class Meta:
         model = Connection
