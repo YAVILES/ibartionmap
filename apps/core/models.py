@@ -36,8 +36,8 @@ class SynchronizedTables(ModelBase):
     alias = models.CharField(max_length=255, verbose_name=_('alias'))
     data = models.JSONField(default=list)
     show_on_map = models.BooleanField(default=False)
-    property_longitude = models.CharField(max_length=255, verbose_name=_("property longitude"), blank=True, null=True)
     property_latitude = models.CharField(max_length=255, verbose_name=_("property latitude"), blank=True, null=True)
+    property_longitude = models.CharField(max_length=255, verbose_name=_("property longitude"), blank=True, null=True)
 
     class Meta:
         verbose_name = _('synchronized table')
