@@ -1,8 +1,10 @@
+from django_celery_beat.models import IntervalSchedule
 from django_celery_results.models import TaskResult
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from django_filters import rest_framework as filters
@@ -10,7 +12,7 @@ import pymysql.cursors
 
 from ibartionmap.utils.functions import connect_with_mysql
 from .models import Connection
-from .serializers import ConnectionDefaultSerializer, TaskResultDefaultSerializer
+from .serializers import ConnectionDefaultSerializer, TaskResultDefaultSerializer, IntervalScheduleSerializer
 
 
 class ConnectionFilter(filters.FilterSet):
@@ -27,6 +29,8 @@ class ConnectionViewSet(ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_class = ConnectionFilter
     serializer_class = ConnectionDefaultSerializer
+    permission_classes = (AllowAny,)
+    authentication_classes = []
 
     def paginate_queryset(self, queryset):
         """
@@ -112,6 +116,8 @@ class ConnectionViewSet(ModelViewSet):
 class TaskResultViewSet(ModelViewSet):
     queryset = TaskResult.objects.all()
     serializer_class = TaskResultDefaultSerializer
+    permission_classes = (AllowAny,)
+    authentication_classes = []
 
     def paginate_queryset(self, queryset):
         """
@@ -153,3 +159,40 @@ class TaskResultViewSet(ModelViewSet):
                 return Response(e, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response({"error": "the field parameter is mandatory"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class IntervalScheduleViewSet(ModelViewSet):
+    queryset = IntervalSchedule.objects.all()
+    serializer_class = IntervalScheduleSerializer
+
+    @action(methods=['GET'], detail=False)
+    def field_options(self, request):
+        field = self.request.query_params.get('field', None)
+        fields = self.request.query_params.getlist('fields', None)
+        if fields:
+            try:
+                data = {}
+                for field in fields:
+                    data[field] = []
+                    for c in IntervalSchedule._meta.get_field(field).choices:
+                        data[field].append({
+                            "value": c[0],
+                            "description": c[1]
+                        })
+                return Response(data, status=status.HTTP_200_OK)
+            except ValueError as e:
+                return Response(e, status=status.HTTP_400_BAD_REQUEST)
+        elif field:
+            try:
+                choices = []
+                for c in IntervalSchedule._meta.get_field(field).choices:
+                    choices.append({
+                        "value": c[0],
+                        "description": c[1]
+                    })
+                return Response(choices, status=status.HTTP_200_OK)
+            except ValueError as e:
+                return Response(e, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({"error": "the field parameter is mandatory"}, status=status.HTTP_400_BAD_REQUEST)
+

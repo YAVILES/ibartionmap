@@ -1,3 +1,4 @@
+from django_celery_beat.models import IntervalSchedule
 from django_celery_results.models import TaskResult
 from django_restql.mixins import DynamicFieldsMixin
 from rest_framework import serializers
@@ -22,6 +23,12 @@ class ConnectionDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerialize
 class TaskResultDefaultSerializer(serializers.ModelSerializer):
     class Meta:
         model = TaskResult
+        fields = serializers.ALL_FIELDS
+
+
+class IntervalScheduleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = IntervalSchedule
         fields = serializers.ALL_FIELDS
 
 

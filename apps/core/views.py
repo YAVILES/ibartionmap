@@ -78,6 +78,8 @@ class DataGroupViewSet(ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_class = DataGroupFilter
     serializer_class = DataGroupDefaultSerializer
+    permission_classes = (AllowAny,)
+    authentication_classes = []
 
     def paginate_queryset(self, queryset):
         """
@@ -131,6 +133,8 @@ class RelationsTableViewSet(ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_class = RelationsTableFilter
     serializer_class = RelationsTableDefaultSerializer
+    permission_classes = (AllowAny,)
+    authentication_classes = []
 
     def paginate_queryset(self, queryset):
         """
