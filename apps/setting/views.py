@@ -164,7 +164,9 @@ class TaskResultViewSet(ModelViewSet):
 class IntervalScheduleViewSet(ModelViewSet):
     queryset = IntervalSchedule.objects.all()
     serializer_class = IntervalScheduleSerializer
-
+    permission_classes = (AllowAny,)
+    authentication_classes = []
+    
     @action(methods=['GET'], detail=False)
     def field_options(self, request):
         field = self.request.query_params.get('field', None)
