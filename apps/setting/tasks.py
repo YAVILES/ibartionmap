@@ -19,8 +19,10 @@ def sync_with_connection(connection_id):
                         # Read a single record
                         table = data["table"]
                         sql = "SELECT " + ", ".join(map(str, data["fields"])) + " FROM " + table
+                        print("sql")
                         cursor.execute(sql)
                         result = cursor.fetchall()
+                        print(result)
                         SynchronizedTables.objects.update_or_create(
                             table=table,
                             defaults={
