@@ -25,7 +25,7 @@ def sync_with_connection(connection_id):
                         SynchronizedTables.objects.update_or_create(
                             table=table,
                             defaults={
-                                "data": json.dumps(results, cls=PythonObjectEncoder)
+                                "data": json.loads(json.dumps(results, cls=PythonObjectEncoder))
                             },
                         )
     except ValueError as e:
