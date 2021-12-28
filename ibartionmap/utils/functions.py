@@ -1,3 +1,4 @@
+import datetime
 from decimal import Decimal
 from json import JSONEncoder
 from uuid import UUID
@@ -14,6 +15,8 @@ from ibartionmap import settings
 
 class PythonObjectEncoder(JSONEncoder):
     def default(self, obj):
+        if isinstance(obj, datetime.date):
+            return str(obj)
         if isinstance(obj, Decimal):
             return float(obj)
         if isinstance(obj, UUID):

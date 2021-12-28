@@ -1,9 +1,11 @@
+import json
+
 from celery import shared_task
 
 # Sincronización de tablas o recursos
 from apps.core.models import SynchronizedTables
 from apps.setting.models import Connection
-from ibartionmap.utils.functions import connect_with_mysql
+from ibartionmap.utils.functions import connect_with_mysql, PythonObjectEncoder
 
 
 @shared_task(name="sync_with_connection")
@@ -16,17 +18,14 @@ def sync_with_connection(connection_id):
             with connection:
                 for data in instance.info_to_sync_selected:
                     with connection.cursor() as cursor:
-                        # Read a single record
                         table = data["table"]
                         sql = "SELECT " + ", ".join(map(str, data["fields"])) + " FROM " + table
-                        print("sql")
                         cursor.execute(sql)
-                        result = cursor.fetchall()
-                        print(result[0])
+                        results = cursor.fetchall()
                         SynchronizedTables.objects.update_or_create(
                             table=table,
                             defaults={
-                                "data": result
+                                "data": json.dumps(results, cls=PythonObjectEncoder)
                             },
                         )
     except ValueError as e:
