@@ -22,7 +22,7 @@ def sync_with_connection(connection_id):
                         print("sql")
                         cursor.execute(sql)
                         result = cursor.fetchall()
-                        print(result)
+                        print(result[0])
                         SynchronizedTables.objects.update_or_create(
                             table=table,
                             defaults={
