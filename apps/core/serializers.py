@@ -21,7 +21,8 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
                         d_two for d_two in relation.table_two.data
                         if d[relation.property_table_one] == d_two[relation.property_table_two]
                     ][0]
-                    d[relation.table_two.table] = data[0]
+                    if len(data) > 0:
+                        d[relation.table_two.table] = data[0]
 
         except ObjectDoesNotExist:
             pass
