@@ -1,6 +1,11 @@
 import uuid
+import json
+
+from django.db.models.query_utils import Q
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models, IntegrityError
 from django.utils.translation import ugettext_lazy as _
+from django.utils.functional import cached_property
 
 MONDAY = 0
 TUESDAY = 1
@@ -46,6 +51,36 @@ class SynchronizedTables(ModelBase):
     def __str__(self):
         return self.table + ", " + str(self.alias) + " (" + str(self.id) + ")"
 
+    @cached_property
+    def serialized_data(self, user: 'security.User' = None):
+        if user:
+            print(user.name)
+        relations_table = RelationsTable.objects.filter(
+            Q(table_one__id=self.id) | Q(Q(two_dimensional=True) & Q(table_two__id=self.id))
+        )
+        for d in self.data:
+            if self.show_on_map:
+                if d[self.property_longitude] and d[self.property_latitude]:
+                    d["point"] = {
+                        "longitude": d[self.property_longitude],
+                        "latitude": d[self.property_latitude]
+                    }
+                else:
+                    d["point"] = None
+            for relation in relations_table:
+                if relation.table_two.id == self.id:
+                    data = [
+                        d_one for d_one in relation.table_one.data
+                        if d[relation.property_table_two] == d_one[relation.property_table_one]
+                    ]
+                    d[relation.table_one.table] = data
+                else:
+                    d[relation.table_two.table] = [
+                        d_two for d_two in relation.table_two.data
+                        if d[relation.property_table_one] == d_two[relation.property_table_two]
+                    ]
+        return self.data
+
 
 class DataGroup(ModelBase):
     description = models.CharField(max_length=100, verbose_name=_('description'), unique=True)
@@ -77,6 +112,7 @@ class RelationsTable(ModelBase):
     )
     property_table_one = models.CharField(max_length=100, verbose_name=_('property table one'))
     property_table_two = models.CharField(max_length=100, verbose_name=_('property table two'))
+    two_dimensional = models.BooleanField(default=False)
 
     def __str__(self):
         return self.table_one.table + " - " + self.table_two.table

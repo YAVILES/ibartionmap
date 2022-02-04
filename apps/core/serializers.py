@@ -1,3 +1,5 @@
+import json
+
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models.query_utils import Q
 from django_restql.mixins import DynamicFieldsMixin
@@ -8,34 +10,9 @@ from .models import SynchronizedTables, DataGroup, RelationsTable
 
 
 class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
-    data = serializers.SerializerMethodField(read_only=True)
+    serialized_data = serializers.ListField(read_only=True)
     table = serializers.CharField(required=True)
-
-    def get_data(self, obj: SynchronizedTables):
-        try:
-            relations_table = RelationsTable.objects.filter(table_one__id=obj.id)
-            for relation in relations_table:
-                relation: RelationsTable = relation
-                for d in obj.data:
-                    data = [
-                        d_two for d_two in relation.table_two.data
-                        if d[relation.property_table_one] == d_two[relation.property_table_two]
-                    ]
-                    if len(data) > 0:
-                        d[relation.table_two.table] = data[0]
-
-        except ObjectDoesNotExist:
-            pass
-        if obj.show_on_map:
-            for d in obj.data:
-                if d[obj.property_longitude] and d[obj.property_latitude]:
-                    d["point"] = {
-                        "longitude": d[obj.property_longitude],
-                        "latitude": d[obj.property_latitude]
-                    }
-                else:
-                    d["point"] = None
-        return obj.data
+    alias = serializers.CharField(required=False)
 
     class Meta:
         model = SynchronizedTables
@@ -90,6 +67,7 @@ class RelationsTableDefaultSerializer(DynamicFieldsMixin, serializers.ModelSeria
     )
     property_table_one = serializers.CharField(max_length=100, required=True)
     property_table_two = serializers.CharField(max_length=100, required=True)
+    two_dimensional = serializers.BooleanField(default=False)
 
     def validate(self, attrs):
         table_one: SynchronizedTables = attrs.get("table_one")
