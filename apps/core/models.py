@@ -2,8 +2,7 @@ import uuid
 import json
 
 from django.db.models.query_utils import Q
-from django.core.exceptions import ObjectDoesNotExist
-from django.db import models, IntegrityError
+from django.db import models
 from django.utils.translation import ugettext_lazy as _
 from django.utils.functional import cached_property
 
@@ -39,10 +38,17 @@ class ModelBase(models.Model):
 class SynchronizedTables(ModelBase):
     table = models.CharField(max_length=100, verbose_name=_('table'), unique=True)
     alias = models.CharField(max_length=255, verbose_name=_('alias'))
+    fields = models.JSONField(default=list)
     data = models.JSONField(default=list)
     show_on_map = models.BooleanField(default=False)
     property_latitude = models.CharField(max_length=255, verbose_name=_("property latitude"), blank=True, null=True)
     property_longitude = models.CharField(max_length=255, verbose_name=_("property longitude"), blank=True, null=True)
+    connection = models.ForeignKey(
+        'setting.Connection',
+        verbose_name=_('connection'),
+        on_delete=models.CASCADE,
+        null=True
+    )
 
     class Meta:
         verbose_name = _('synchronized table')

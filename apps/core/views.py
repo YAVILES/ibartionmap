@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
 from rest_framework.decorators import action
@@ -10,6 +11,7 @@ from django_filters import rest_framework as filters
 from .models import SynchronizedTables, DataGroup, RelationsTable
 from .serializers import SynchronizedTablesDefaultSerializer, DataGroupDefaultSerializer, \
     RelationsTableDefaultSerializer
+from ..setting.models import Connection
 
 
 class SynchronizedTablesFilter(filters.FilterSet):
@@ -76,6 +78,52 @@ class SynchronizedTablesViewSet(ModelViewSet):
                 return Response(e, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response({"error": "the field parameter is mandatory"}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(methods=['GET'], detail=False)
+    def get_table(self, request):
+        connection = self.request.query_params.get('connection', None)
+        table = self.request.query_params.get('table', None)
+        if connection and table:
+            try:
+                connection = Connection.objects.get(pk=connection)
+                fields = None
+            except ObjectDoesNotExist:
+                return Response(
+                    {"error": "La conexión no existe"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            try:
+                synchronized_table = SynchronizedTables.objects.get(connection_id=connection, table=table)
+                return Response(SynchronizedTablesDefaultSerializer(synchronized_table).data, status=status.HTTP_200_OK)
+            except ObjectDoesNotExist:
+                for info in connection.info_to_sync:
+                    if info.get('table') == table:
+                        fields = info.get('fields')
+                        for field in fields:
+                            field["selected"] = False
+                        break
+                if fields is None:
+                    return Response(
+                        {"error": "La tabla no existe"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                synchronized_table = SynchronizedTables(
+                    table=table,
+                    alias="",
+                    fields=fields,
+                    data=[],
+                    show_on_map=False,
+                    property_latitude=None,
+                    property_longitude=None,
+                    connection=connection
+                )
+                return Response(SynchronizedTablesDefaultSerializer(synchronized_table).data, status=status.HTTP_200_OK)
+        else:
+            return Response(
+                {"error": "Debes enviar el id de la conexion y el nombre de la tabla"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class DataGroupFilter(filters.FilterSet):

@@ -45,8 +45,9 @@ class Connection(ModelBase):
         null=True
     )
     every_interval = models.IntegerField(verbose_name=_('every interval'),  blank=None, default=10)
-    period_interval = models.CharField(max_length=25, verbose_name=_('period interval'),
-                                       default=IntervalSchedule.SECONDS, blank=None)
+    period_interval = models.CharField(
+        max_length=25, verbose_name=_('period interval'), default=IntervalSchedule.SECONDS, blank=None
+    )
     is_active = models.BooleanField(verbose_name=_('is active'), default=True)
 
     def __str__(self):
