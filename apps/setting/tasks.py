@@ -26,11 +26,7 @@ def sync_with_connection(connection_id):
                         sql = "SELECT " + ", ".join(map(str, fields)) + " FROM " + table
                         cursor.execute(sql)
                         results = cursor.fetchall()
-                        SynchronizedTables.objects.update(
-                            table=table,
-                            defaults={
-                                "data": json.loads(json.dumps(results, cls=PythonObjectEncoder))
-                            },
-                        )
+                        synchronized_table.data = json.loads(json.dumps(results, cls=PythonObjectEncoder))
+                        synchronized_table.save(update_fields=['data'])
     except ValueError as e:
         print(e.__str__())
