@@ -10,7 +10,7 @@ from django_filters import rest_framework as filters
 
 from .models import SynchronizedTables, DataGroup, RelationsTable
 from .serializers import SynchronizedTablesDefaultSerializer, DataGroupDefaultSerializer, \
-    RelationsTableDefaultSerializer
+    RelationsTableDefaultSerializer, SynchronizedTablesSimpleDefaultSerializer
 from ..setting.models import Connection
 
 
@@ -95,7 +95,10 @@ class SynchronizedTablesViewSet(ModelViewSet):
 
             try:
                 synchronized_table = SynchronizedTables.objects.get(connection_id=connection, table=table)
-                return Response(SynchronizedTablesDefaultSerializer(synchronized_table).data, status=status.HTTP_200_OK)
+                return Response(
+                    SynchronizedTablesSimpleDefaultSerializer(synchronized_table).data,
+                    status=status.HTTP_200_OK
+                )
             except ObjectDoesNotExist:
                 for info in connection.info_to_sync:
                     if info.get('table') == table:
@@ -118,7 +121,10 @@ class SynchronizedTablesViewSet(ModelViewSet):
                     property_longitude=None,
                     connection=connection
                 )
-                return Response(SynchronizedTablesDefaultSerializer(synchronized_table).data, status=status.HTTP_200_OK)
+                return Response(
+                    SynchronizedTablesSimpleDefaultSerializer(synchronized_table).data,
+                    status=status.HTTP_200_OK
+                )
         else:
             return Response(
                 {"error": "Debes enviar el id de la conexion y el nombre de la tabla"},

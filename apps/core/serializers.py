@@ -9,6 +9,15 @@ from django.utils.translation import ugettext_lazy as _
 from .models import SynchronizedTables, DataGroup, RelationsTable
 
 
+class SynchronizedTablesSimpleDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
+    table = serializers.CharField(required=True)
+    alias = serializers.CharField(required=False)
+
+    class Meta:
+        model = SynchronizedTables
+        fields = ('id', 'table', 'fields', 'show_on_map', 'property_latitude', 'property_longitude',)
+
+
 class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
     serialized_data = serializers.ListField(read_only=True)
     table = serializers.CharField(required=True)
