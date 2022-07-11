@@ -6,7 +6,7 @@ from rest_framework import serializers
 from apps.setting.models import Connection
 
 
-class InfoToSyncSerializer(serializers.Serializer):
+class InfoToSyncSerializer(DynamicFieldsMixin, serializers.Serializer):
     table = serializers.CharField(required=True)
     fields = serializers.ListField(required=True)
 
