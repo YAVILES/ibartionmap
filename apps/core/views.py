@@ -111,7 +111,7 @@ class SynchronizedTablesViewSet(ModelViewSet):
                         {"error": "La tabla no existe"},
                         status=status.HTTP_400_BAD_REQUEST
                     )
-                synchronized_table = SynchronizedTables(
+                synchronized_table = SynchronizedTables.objects.create(
                     table=table,
                     alias="",
                     fields=fields,
