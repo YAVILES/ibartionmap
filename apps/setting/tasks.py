@@ -16,13 +16,17 @@ def sync_with_connection(connection_id):
             # Connect to the database
             connection = connect_with_mysql(instance)
             with connection:
-                for data in instance.info_to_sync_selected:
+                for table in instance.info_to_sync_selected:
+                    fields = []
+                    synchronized_table = SynchronizedTables.objects.get(table=table, connection_id=connection_id)
+                    for field in synchronized_table.fields:
+                        if field["selected"]:
+                            fields.append(field["Field"])
                     with connection.cursor() as cursor:
-                        table = data["table"]
-                        sql = "SELECT " + ", ".join(map(str, data["fields"])) + " FROM " + table
+                        sql = "SELECT " + ", ".join(map(str, fields)) + " FROM " + table
                         cursor.execute(sql)
                         results = cursor.fetchall()
-                        SynchronizedTables.objects.update_or_create(
+                        SynchronizedTables.objects.update(
                             table=table,
                             defaults={
                                 "data": json.loads(json.dumps(results, cls=PythonObjectEncoder))
