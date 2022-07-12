@@ -13,7 +13,7 @@ class InfoToSyncSerializer(DynamicFieldsMixin, serializers.Serializer):
 
 class ConnectionDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
     info_to_sync = InfoToSyncSerializer(many=True, required=False)
-    info_to_sync_selected = serializers.ListField(child=serializers.CharField(max_length=255))
+    info_to_sync_selected = serializers.ListField(child=serializers.CharField(max_length=255), required=False)
 
     class Meta:
         model = Connection
