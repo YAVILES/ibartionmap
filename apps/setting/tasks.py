@@ -22,11 +22,12 @@ def sync_with_connection(connection_id):
                     for field in synchronized_table.fields:
                         if field["selected"]:
                             fields.append(field["Field"])
-                    with connection.cursor() as cursor:
-                        sql = "SELECT " + ", ".join(map(str, fields)) + " FROM " + table
-                        cursor.execute(sql)
-                        results = cursor.fetchall()
-                        synchronized_table.data = json.loads(json.dumps(results, cls=PythonObjectEncoder))
-                        synchronized_table.save(update_fields=['data'])
+                    if fields:
+                        with connection.cursor() as cursor:
+                            sql = "SELECT " + ", ".join(map(str, fields)) + " FROM " + table
+                            cursor.execute(sql)
+                            results = cursor.fetchall()
+                            synchronized_table.data = json.loads(json.dumps(results, cls=PythonObjectEncoder))
+                            synchronized_table.save(update_fields=['data'])
     except ValueError as e:
         print(e.__str__())

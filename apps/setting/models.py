@@ -75,35 +75,35 @@ def post_save_connection(sender, instance: Connection, **kwargs):
             instance.periodic_task_id = periodic_task.id
             instance.save(update_fields=["periodic_task_id"])
     else:
+        for table in instance.info_to_sync_selected:
+            try:
+                synchronized_table = SynchronizedTables.objects.get(connection_id=instance.id, table=table)
+                if not synchronized_table.is_active:
+                    synchronized_table.is_active = True
+                    synchronized_table.save(update_fields=['is_active'])
+            except ObjectDoesNotExist:
+                for info in instance.info_to_sync:
+                    if info.get('table') == table:
+                        fields = info.get('fields')
+                        for field in fields:
+                            field["selected"] = False
+                        break
+                synchronized_table = SynchronizedTables.objects.create(
+                    table=table,
+                    alias="",
+                    fields=fields,
+                    data=[],
+                    show_on_map=False,
+                    property_latitude=None,
+                    property_longitude=None,
+                    connection=instance
+                )
+        SynchronizedTables.objects.filter(
+            connection_id=instance.id
+        ).exclude(
+            table__in=instance.info_to_sync_selected
+        ).update(is_active=False)
         if instance.type == Connection.DB and instance.info_to_sync_selected:
-            for table in instance.info_to_sync_selected:
-                try:
-                    synchronized_table = SynchronizedTables.objects.get(connection_id=instance.id, table=table)
-                    if not synchronized_table.is_active:
-                        synchronized_table.is_active = True
-                        synchronized_table.save(update_fields=['is_active'])
-                except ObjectDoesNotExist:
-                    for info in instance.info_to_sync:
-                        if info.get('table') == table:
-                            fields = info.get('fields')
-                            for field in fields:
-                                field["selected"] = False
-                            break
-                    synchronized_table = SynchronizedTables.objects.create(
-                        table=table,
-                        alias="",
-                        fields=fields,
-                        data=[],
-                        show_on_map=False,
-                        property_latitude=None,
-                        property_longitude=None,
-                        connection=instance
-                    )
-            SynchronizedTables.objects.filter(
-                connection_id=instance.id
-            ).exclude(
-                table__in=instance.info_to_sync_selected
-            ).update(is_active=False)
             try:
                 periodic_task: PeriodicTask = PeriodicTask.objects.get(
                     id=instance.periodic_task_id
