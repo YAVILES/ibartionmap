@@ -49,6 +49,7 @@ class SynchronizedTables(ModelBase):
         on_delete=models.CASCADE,
         null=True
     )
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = _('synchronized table')
@@ -68,8 +69,8 @@ class SynchronizedTables(ModelBase):
             if self.show_on_map:
                 if d[self.property_longitude] and d[self.property_latitude]:
                     d["point"] = {
-                        "longitude": d[self.property_longitude],
-                        "latitude": d[self.property_latitude]
+                        "longitude": float(d[self.property_longitude]),
+                        "latitude": float(d[self.property_latitude])
                     }
                 else:
                     d["point"] = None
