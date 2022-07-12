@@ -17,7 +17,7 @@ from ..setting.models import Connection
 class SynchronizedTablesFilter(filters.FilterSet):
     class Meta:
         model = SynchronizedTables
-        fields = ['table', 'alias']
+        fields = ['table', 'alias', 'show_on_map']
 
 
 class SynchronizedTablesViewSet(ModelViewSet):
@@ -190,7 +190,7 @@ class DataGroupViewSet(ModelViewSet):
 class RelationsTableFilter(filters.FilterSet):
     class Meta:
         model = RelationsTable
-        fields = ['table_one', 'table_two', 'property_table_one', 'property_table_two']
+        fields = ['table_one', 'table_two', 'property_table_one', 'property_table_two', 'table_one__connection_id']
 
 
 class RelationsTableViewSet(ModelViewSet):
