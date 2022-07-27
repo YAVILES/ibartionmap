@@ -79,6 +79,7 @@ class RelationsTableDefaultSerializer(DynamicFieldsMixin, serializers.ModelSeria
     property_table_two = serializers.CharField(max_length=100, required=True)
     two_dimensional = serializers.BooleanField(default=False)
 
+    '''
     def validate(self, attrs):
         table_one: SynchronizedTables = attrs.get("table_one")
         table_two: SynchronizedTables = attrs.get("table_two")
@@ -94,6 +95,7 @@ class RelationsTableDefaultSerializer(DynamicFieldsMixin, serializers.ModelSeria
         except ObjectDoesNotExist:
             pass
         return attrs
+    '''
 
     class Meta:
         model = RelationsTable
