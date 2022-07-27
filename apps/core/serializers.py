@@ -15,7 +15,8 @@ class SynchronizedTablesSimpleDefaultSerializer(DynamicFieldsMixin, serializers.
 
     class Meta:
         model = SynchronizedTables
-        fields = ('id', 'table', 'alias', 'fields', 'show_on_map', 'property_latitude', 'property_longitude',)
+        fields = ('id', 'table', 'alias', 'fields', 'show_on_map', 'property_latitude', 'property_longitude',
+                  'property_icon',)
 
 
 class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
