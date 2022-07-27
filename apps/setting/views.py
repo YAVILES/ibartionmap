@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist
 from django_celery_beat.models import IntervalSchedule
 from django_celery_results.models import TaskResult
 from django_filters.rest_framework import DjangoFilterBackend
@@ -13,6 +14,7 @@ import pymysql.cursors
 from ibartionmap.utils.functions import connect_with_mysql
 from .models import Connection
 from .serializers import ConnectionDefaultSerializer, TaskResultDefaultSerializer, IntervalScheduleSerializer
+from ..core.models import SynchronizedTables
 
 
 class ConnectionFilter(filters.FilterSet):
@@ -99,6 +101,21 @@ class ConnectionViewSet(ModelViewSet):
                                     "table": table,
                                     "fields": list(fields)
                                 })
+                                synchronized_table = SynchronizedTables.objects.get(table=table)
+                                for field in list(fields):
+                                    if not list(
+                                            filter(
+                                                lambda x: (x.get('Field') == field.get('Field')),
+                                                list(synchronized_table.fields)
+                                            )
+                                    ):
+                                        fields_new = list(synchronized_table.fields)
+                                        fields_new.append(field)
+                                        synchronized_table.fields = fields_new
+                                        synchronized_table.save(update_fields=['fields'])
+
+                            except ObjectDoesNotExist:
+                                pass
                             except Exception as e:
                                 return Response({
                                     "table": table,
