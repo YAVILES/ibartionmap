@@ -43,6 +43,7 @@ class SynchronizedTables(ModelBase):
     show_on_map = models.BooleanField(default=False)
     property_latitude = models.CharField(max_length=255, verbose_name=_("property latitude"), blank=True, null=True)
     property_longitude = models.CharField(max_length=255, verbose_name=_("property longitude"), blank=True, null=True)
+    property_icon = models.TextField(verbose_name=_("property icon url"), blank=True, null=True)
     connection = models.ForeignKey(
         'setting.Connection',
         verbose_name=_('connection'),
@@ -60,8 +61,6 @@ class SynchronizedTables(ModelBase):
 
     @cached_property
     def serialized_data(self, user: 'security.User' = None):
-        if user:
-            print(user.name)
         relations_table = RelationsTable.objects.filter(
             Q(table_one__id=self.id) | Q(Q(two_dimensional=True) & Q(table_two__id=self.id))
         )
