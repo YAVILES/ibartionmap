@@ -18,7 +18,9 @@ def sync_with_connection(connection_id):
             with connection:
                 for table in instance.info_to_sync_selected:
                     fields = []
-                    synchronized_table = SynchronizedTables.objects.get(table=table, connection_id=connection_id)
+                    synchronized_table = SynchronizedTables.objects.get(
+                        table=table, connection_id=connection_id, is_virtual=False
+                    )
                     for field in synchronized_table.fields:
                         if field["selected"]:
                             fields.append(field["Field"])

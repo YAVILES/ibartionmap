@@ -51,6 +51,14 @@ class SynchronizedTables(ModelBase):
         null=True
     )
     is_active = models.BooleanField(default=True)
+    is_virtual = models.BooleanField(default=False)
+    relation = models.ForeignKey(
+        'core.RelationsTable',
+        verbose_name=_('relation'),
+        on_delete=models.CASCADE,
+        null=True,
+        default=None
+    )
 
     class Meta:
         verbose_name = _('synchronized table')
