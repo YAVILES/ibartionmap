@@ -75,6 +75,8 @@ class RelationsTableDefaultSerializer(DynamicFieldsMixin, serializers.ModelSeria
         queryset=SynchronizedTables.objects.all(),
         required=True
     )
+    table_one_display = SynchronizedTablesSimpleDefaultSerializer(read_only=True, source="table_one")
+    table_two_display = SynchronizedTablesSimpleDefaultSerializer(read_only=True, source="table_two")
     property_table_one = serializers.CharField(max_length=100, required=True)
     property_table_two = serializers.CharField(max_length=100, required=True)
     two_dimensional = serializers.BooleanField(default=False)
