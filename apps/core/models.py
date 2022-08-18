@@ -75,7 +75,6 @@ class SynchronizedTables(ModelBase):
     def __str__(self):
         return self.table + ", " + str(self.alias) + " (" + str(self.id) + ")"
 
-
     @cached_property
     def serialized_data(self, user: 'security.User' = None):
         if self.is_virtual:
@@ -86,7 +85,6 @@ class SynchronizedTables(ModelBase):
             ]))
             relation: RelationsTable = self.relation
             self.serialized_data = []
-            print(relation.property_table_two, relation.property_table_one)
             for d_one in relation.table_one.data:
                 for d_two in relation.table_two.data:
                     if d_one[relation.property_table_one] == d_two[relation.property_table_two]:
