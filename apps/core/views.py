@@ -17,7 +17,7 @@ from ..setting.models import Connection
 class SynchronizedTablesFilter(filters.FilterSet):
     class Meta:
         model = SynchronizedTables
-        fields = ['table', 'alias', 'show_on_map', 'is_active', 'connection_id']
+        fields = ['table', 'alias', 'show_on_map', 'is_active', 'connection_id', 'is_virtual', 'relation']
 
 
 class SynchronizedTablesViewSet(ModelViewSet):
@@ -119,6 +119,7 @@ class SynchronizedTablesViewSet(ModelViewSet):
                     show_on_map=False,
                     property_latitude=None,
                     property_longitude=None,
+                    is_virtual=False,
                     connection=connection
                 )
                 return Response(

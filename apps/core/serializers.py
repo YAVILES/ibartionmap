@@ -23,6 +23,7 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
     serialized_data = serializers.ListField(read_only=True)
     table = serializers.CharField(required=True)
     alias = serializers.CharField(required=False)
+    is_virtual = serializers.BooleanField(required=False, default=True)
 
     class Meta:
         model = SynchronizedTables
