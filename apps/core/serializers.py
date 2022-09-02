@@ -22,23 +22,23 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
     alias = serializers.CharField(required=False)
     is_virtual = serializers.BooleanField(required=False, default=True)
 
-    def create(self, validated_data):
-        try:
-            is_virtual = validated_data.get('is_virtual')
-            if is_virtual:
-                relation: RelationsTable = validated_data.get('relation', None)
-                if relation is None:
-                    raise serializers.ValidationError(detail={
-                        'error': "Debe identificar la relacion obligatoriamente en las tablas virtuales"
-                    })
-                alias = str(validated_data.get('alias'))
-                validated_data['table'] = "{0}_{1}_{2}".format(
-                    relation.table_one.table, relation.table_two.table, alias.replace(" ", "").lower()
-                )
-            table = super(SynchronizedTablesDefaultSerializer, self).create(validated_data)
-            return table
-        except ValidationError as error:
-            raise serializers.ValidationError(detail={"error": error.messages})
+    def validate(self, attrs):
+        is_virtual = attrs.get('is_virtual')
+        if is_virtual:
+            relation: RelationsTable = attrs.get('relation', None)
+            if relation is None:
+                raise serializers.ValidationError(detail={
+                    'error': "Debe identificar la relacion obligatoriamente en las tablas virtuales"
+                })
+            alias = str(attrs.get('alias'))
+            attrs['table'] = "{0}_{1}_{2}".format(
+                relation.table_one.table, relation.table_two.table, alias.replace(" ", "").lower()
+            )
+            if SynchronizedTables.objects.filter(table=attrs['table']).exists():
+                raise serializers.ValidationError(detail={
+                    'error': "Ya existe una tabla con este nombre"
+                })
+        return attrs
 
     class Meta:
         model = SynchronizedTables
