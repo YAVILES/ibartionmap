@@ -31,7 +31,10 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
                     raise serializers.ValidationError(detail={
                         'error': "Debe identificar la relacion obligatoriamente en las tablas virtuales"
                     })
-                validated_data['table'] = "{0} {1}".format(relation.table_one.table, relation.table_two.table,)
+                alias = str(validated_data.get('alias'))
+                validated_data['table'] = "{0} {1} {2}".format(
+                    relation.table_one.table, relation.table_two.table, relation.table_two.table, alias.replace(" ", "")
+                )
             table = super(SynchronizedTablesDefaultSerializer, self).create(validated_data)
             return table
         except ValidationError as error:

@@ -31,28 +31,31 @@ def map_virtual(data, fields, show_on_map, table_geo_id, property_latitude, prop
         if field in data.keys():
             d[field] = data[field]
     if show_on_map:
-        if 'table' in list(d.keys()) and table_geo_id == d['table'] and d[property_latitude] and d[property_longitude]:
-            d["point"] = {
-                "longitude": float(d[property_longitude]),
-                "latitude": float(d[property_latitude])
-            }
-        else:
-            try:
-                if d[property_latitude] and d[property_longitude]:
-                    d["point"] = {
-                        "longitude": float(d[property_longitude]),
-                        "latitude": float(d[property_latitude])
-                    }
-                else:
-                    d["point"] = None
-            except KeyError:
-                if d[property_latitude] and d[property_longitude]:
-                    d["point"] = {
-                        "longitude": float(d[property_longitude]),
-                        "latitude": float(d[property_latitude])
-                    }
-                else:
-                    d["point"] = None
+        try:
+            if 'table' in list(d.keys()) and table_geo_id == d['table'] and d[property_latitude] and d[property_longitude]:
+                d["point"] = {
+                    "longitude": float(d[property_longitude]),
+                    "latitude": float(d[property_latitude])
+                }
+            else:
+                try:
+                    if d[property_latitude] and d[property_longitude]:
+                        d["point"] = {
+                            "longitude": float(d[property_longitude]),
+                            "latitude": float(d[property_latitude])
+                        }
+                    else:
+                        d["point"] = None
+                except KeyError:
+                    if d[property_latitude] and d[property_longitude]:
+                        d["point"] = {
+                            "longitude": float(d[property_longitude]),
+                            "latitude": float(d[property_latitude])
+                        }
+                    else:
+                        d["point"] = None
+        except KeyError:
+            d['point'] = None
     return d
 
 
