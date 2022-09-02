@@ -33,7 +33,7 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
                     })
                 alias = str(validated_data.get('alias'))
                 validated_data['table'] = "{0}_{1}_{2}".format(
-                    relation.table_one.table, relation.table_two.table, alias.replace(" ", "")
+                    relation.table_one.table, relation.table_two.table, alias.replace(" ", "").lower()
                 )
             table = super(SynchronizedTablesDefaultSerializer, self).create(validated_data)
             return table
