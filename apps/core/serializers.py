@@ -1,7 +1,4 @@
-import json
-
-from django.core.exceptions import ObjectDoesNotExist
-from django.db.models.query_utils import Q
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django_restql.mixins import DynamicFieldsMixin
 from rest_framework import serializers
 from django.utils.translation import ugettext_lazy as _
@@ -21,9 +18,24 @@ class SynchronizedTablesSimpleDefaultSerializer(DynamicFieldsMixin, serializers.
 
 class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
     serialized_data = serializers.ListField(read_only=True)
-    table = serializers.CharField(required=True)
+    table = serializers.CharField(required=False)
     alias = serializers.CharField(required=False)
     is_virtual = serializers.BooleanField(required=False, default=True)
+
+    def create(self, validated_data):
+        try:
+            is_virtual = validated_data.get('is_virtual')
+            if is_virtual:
+                relation: RelationsTable = validated_data.get('relation', None)
+                if relation is None:
+                    raise serializers.ValidationError(detail={
+                        'error': "Debe identificar la relacion obligatoriamente en las tablas virtuales"
+                    })
+                validated_data['table'] = "{0} {1}".format(relation.table_one.table, relation.table_two.table,)
+            table = super(SynchronizedTablesDefaultSerializer, self).create(validated_data)
+            return table
+        except ValidationError as error:
+            raise serializers.ValidationError(detail={"error": error.messages})
 
     class Meta:
         model = SynchronizedTables

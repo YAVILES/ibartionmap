@@ -25,11 +25,34 @@ DAYS = (
 )
 
 
-def map_virtual(data, fields):
+def map_virtual(data, fields, show_on_map, table_geo_id, property_latitude, property_longitude):
     d = {}
     for field in fields:
         if field in data.keys():
             d[field] = data[field]
+    if show_on_map:
+        if 'table' in list(d.keys()) and table_geo_id == d['table'] and d[property_latitude] and d[property_longitude]:
+            d["point"] = {
+                "longitude": float(d[property_longitude]),
+                "latitude": float(d[property_latitude])
+            }
+        else:
+            try:
+                if d[property_latitude] and d[property_longitude]:
+                    d["point"] = {
+                        "longitude": float(d[property_longitude]),
+                        "latitude": float(d[property_latitude])
+                    }
+                else:
+                    d["point"] = None
+            except KeyError:
+                if d[property_latitude] and d[property_longitude]:
+                    d["point"] = {
+                        "longitude": float(d[property_longitude]),
+                        "latitude": float(d[property_latitude])
+                    }
+                else:
+                    d["point"] = None
     return d
 
 
@@ -84,21 +107,30 @@ class SynchronizedTables(ModelBase):
     @cached_property
     def serialized_data(self, user: 'security.User' = None):
         if self.is_virtual:
-            self.data = []
             fields = list(set([
                 (field.get('table'), field.get('Field')) for field in self.fields
                 if not field.get('table', None) is None and not field.get('Field') is None
             ]))
             relation: RelationsTable = self.relation
-            self.serialized_data = []
+            serialized_data = []
             for d_one in relation.table_one.data:
+                keys_d_one = list(d_one.keys())
                 for d_two in relation.table_two.data:
                     if d_one[relation.property_table_one] == d_two[relation.property_table_two]:
+                        d_one['table'] = str(relation.table_one.id)
+                        keys_d_two = list(d_two.keys())
+                        for key in keys_d_one:
+                            if key in keys_d_two:
+                                d_two[key+"1"] = d_two[key]
+                                d_two.pop(key)
                         d_one.update(d_two)
-                        self.serialized_data.append(d_one)
+                        serialized_data.append(d_one)
                         break
             f = [field[1] for field in fields]
-            return map(lambda e: map_virtual(e, f), self.serialized_data)
+            return map(
+                lambda e: map_virtual(e, f, self.show_on_map, str(self.table_geo.id), self.property_latitude, self.property_longitude),
+                serialized_data
+            )
         else:
             relations_table = RelationsTable.objects.filter(
                 Q(table_one__id=self.id) | Q(Q(two_dimensional=True) & Q(table_two__id=self.id))
