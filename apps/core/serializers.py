@@ -32,7 +32,7 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
                         'error': "Debe identificar la relacion obligatoriamente en las tablas virtuales"
                     })
                 alias = str(validated_data.get('alias'))
-                validated_data['table'] = "{0} {1} {2}".format(
+                validated_data['table'] = "{0}_{1}_{2}".format(
                     relation.table_one.table, relation.table_two.table, relation.table_two.table, alias.replace(" ", "")
                 )
             table = super(SynchronizedTablesDefaultSerializer, self).create(validated_data)
