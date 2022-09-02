@@ -49,6 +49,12 @@ class SynchronizedTables(ModelBase):
     fields = models.JSONField(default=list)
     data = models.JSONField(default=list)
     show_on_map = models.BooleanField(default=False)
+    table_geo = models.ForeignKey(
+        'core.SynchronizedTables',
+        verbose_name=_('table geo'),
+        on_delete=models.CASCADE,
+        null=True
+    )
     property_latitude = models.CharField(max_length=255, verbose_name=_("property latitude"), blank=True, null=True)
     property_longitude = models.CharField(max_length=255, verbose_name=_("property longitude"), blank=True, null=True)
     property_icon = models.TextField(verbose_name=_("property icon url"), blank=True, null=True)
