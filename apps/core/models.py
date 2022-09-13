@@ -120,7 +120,10 @@ class SynchronizedTables(ModelBase):
                 keys_d_one = list(d_one.keys())
                 for d_two in relation.table_two.data:
                     if d_one[relation.property_table_one] == d_two[relation.property_table_two]:
-                        d_one['table'] = str(relation.table_one.id)
+                        if self.table_geo.id == relation.table_one.id:
+                            d_one['table'] = str(relation.table_one.id)
+                        else:
+                            d_one['table'] = str(relation.two.id)
                         keys_d_two = list(d_two.keys())
                         for key in keys_d_one:
                             if key in keys_d_two:
