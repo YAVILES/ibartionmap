@@ -123,7 +123,7 @@ class SynchronizedTables(ModelBase):
                         if self.table_geo.id == relation.table_one.id:
                             d_one['table'] = str(relation.table_one.id)
                         else:
-                            d_one['table'] = str(relation.two.id)
+                            d_one['table'] = str(relation.table_two.id)
                         keys_d_two = list(d_two.keys())
                         for key in keys_d_one:
                             if key in keys_d_two:
