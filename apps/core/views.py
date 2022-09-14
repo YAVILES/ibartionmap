@@ -1,4 +1,5 @@
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
 from rest_framework.decorators import action
@@ -94,7 +95,11 @@ class SynchronizedTablesViewSet(ModelViewSet):
                 )
 
             try:
-                synchronized_table = SynchronizedTables.objects.get(connection_id=connection, table=table)
+                synchronized_table = SynchronizedTables.objects.get(
+                    Q(
+                        Q(connection_id=connection) | Q(is_virtual=True)
+                    ) & Q(table=table)
+                )
                 return Response(
                     SynchronizedTablesSimpleDefaultSerializer(synchronized_table).data,
                     status=status.HTTP_200_OK
