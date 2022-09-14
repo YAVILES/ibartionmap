@@ -115,7 +115,6 @@ class SynchronizedTablesViewSet(ModelViewSet):
                     table=table,
                     alias="",
                     fields=fields,
-                    data=[],
                     show_on_map=False,
                     property_latitude=None,
                     property_longitude=None,

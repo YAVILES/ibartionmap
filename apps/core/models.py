@@ -5,6 +5,7 @@ from django.db.models.query_utils import Q
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 from django.utils.functional import cached_property
+from bulk_update_or_create import BulkUpdateOrCreateQuerySet
 
 MONDAY = 0
 TUESDAY = 1
@@ -73,7 +74,6 @@ class SynchronizedTables(ModelBase):
     table = models.CharField(max_length=100, verbose_name=_('table'), unique=True)
     alias = models.CharField(max_length=255, verbose_name=_('alias'))
     fields = models.JSONField(default=list)
-    data = models.JSONField(default=list)
     show_on_map = models.BooleanField(default=False)
     table_geo = models.ForeignKey(
         'core.SynchronizedTables',
@@ -116,9 +116,9 @@ class SynchronizedTables(ModelBase):
             ]))
             relation: RelationsTable = self.relation
             serialized_data = []
-            for d_one in relation.table_one.data:
+            for d_one in relation.table_one.data.all().values_list('data', flat=True):
                 keys_d_one = list(d_one.keys())
-                for d_two in relation.table_two.data:
+                for d_two in relation.table_two.data.all().values_list('data', flat=True):
                     if d_one[relation.property_table_one] == d_two[relation.property_table_two]:
                         if self.table_geo.id == relation.table_one.id:
                             d_one['table'] = str(relation.table_one.id)
@@ -141,7 +141,8 @@ class SynchronizedTables(ModelBase):
             relations_table = RelationsTable.objects.filter(
                 Q(table_one__id=self.id) | Q(Q(two_dimensional=True) & Q(table_two__id=self.id))
             )
-            for d in self.data:
+            serialized_data = []
+            for d in self.data.all().values_list('data', flat=True):
                 if self.show_on_map:
                     if d[self.property_longitude] and d[self.property_latitude]:
                         d["point"] = {
@@ -153,16 +154,30 @@ class SynchronizedTables(ModelBase):
                 for relation in relations_table:
                     if relation.table_two.id == self.id:
                         data = [
-                            d_one for d_one in relation.table_one.data
+                            d_one for d_one in relation.table_one.data.all().values_list('data', flat=True)
                             if d[relation.property_table_two] == d_one[relation.property_table_one]
                         ]
                         d[relation.table_one.table] = data
                     else:
                         d[relation.table_two.table] = [
-                            d_two for d_two in relation.table_two.data
+                            d_two for d_two in relation.table_two.data.all().values_list('data', flat=True)
                             if d[relation.property_table_one] == d_two[relation.property_table_two]
                         ]
-        return self.data
+                serialized_data.append(d)
+        return serialized_data
+
+
+class SynchronizedTablesData(ModelBase):
+    table = models.ForeignKey(
+        SynchronizedTables,
+        verbose_name=_('table'),
+        related_name=_('data'),
+        on_delete=models.PROTECT,
+        blank=True,
+        null=True
+    )
+    data = models.JSONField(default=dict)
+    objects = BulkUpdateOrCreateQuerySet.as_manager()
 
 
 class DataGroup(ModelBase):

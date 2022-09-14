@@ -3,7 +3,7 @@ import json
 from celery import shared_task
 
 # Sincronización de tablas o recursos
-from apps.core.models import SynchronizedTables
+from apps.core.models import SynchronizedTables, SynchronizedTablesData
 from apps.setting.models import Connection
 from ibartionmap.utils.functions import connect_with_mysql, PythonObjectEncoder
 
@@ -29,7 +29,19 @@ def sync_with_connection(connection_id):
                             sql = "SELECT " + ", ".join(map(str, fields)) + " FROM " + table
                             cursor.execute(sql)
                             results = cursor.fetchall()
-                            synchronized_table.data = json.loads(json.dumps(results, cls=PythonObjectEncoder))
-                            synchronized_table.save(update_fields=['data'])
+                            items = []
+                            for d in json.loads(json.dumps(results, cls=PythonObjectEncoder)):
+                                items.append(
+                                    SynchronizedTablesData(
+                                        table_id=synchronized_table.id,
+                                        data=d
+                                    )
+                                )
+                            SynchronizedTablesData.objects.filter(table_id=synchronized_table.id).delete()
+                            SynchronizedTablesData.objects.bulk_update_or_create(
+                                items,
+                                ['table_id', 'data'],
+                                match_field='id'
+                            )
     except ValueError as e:
         print(e.__str__())

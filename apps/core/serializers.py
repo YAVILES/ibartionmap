@@ -3,7 +3,13 @@ from django_restql.mixins import DynamicFieldsMixin
 from rest_framework import serializers
 from django.utils.translation import ugettext_lazy as _
 
-from .models import SynchronizedTables, DataGroup, RelationsTable
+from .models import SynchronizedTables, DataGroup, RelationsTable, SynchronizedTablesData
+
+
+class SynchronizedTableDataDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
+    class Meta:
+        model = SynchronizedTablesData
+        fields = serializers.ALL_FIELDS
 
 
 class SynchronizedTablesSimpleDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
