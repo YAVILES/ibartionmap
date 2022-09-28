@@ -2,7 +2,7 @@ import uuid
 import json
 
 from django.db.models import CharField
-from django.db.models.functions import Cast
+from django.db.models.functions import Cast, Lower
 from django.db.models.query_utils import Q
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
@@ -112,12 +112,13 @@ class SynchronizedTables(ModelBase):
     @cached_property
     def details(self):
         search = self.request.query_params.get('search', None)
-        print('search {0}'.format(search))
         if search is None:
             return self.data.all()
         else:
+            if not search.islower():
+                search = search.lower()
             return self.data.all().annotate(
-                data_format=Cast('data', output_field=CharField()),
+                data_format=Lower(Cast('data', output_field=CharField())),
             ).filter(
                 data_format__contains=search
             )
