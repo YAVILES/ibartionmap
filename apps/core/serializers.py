@@ -27,10 +27,15 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
     table = serializers.CharField(required=False)
     alias = serializers.CharField(required=False)
     is_virtual = serializers.BooleanField(required=False, default=True)
+    data_groups = serializers.SerializerMethodField(read_only=True)
 
     def get_serialized_data(self, table: SynchronizedTables):
         request = self.context.get('request')
-        return table.serialized_data(request.query_params.get('search', None))
+        return table.serialized_data(request.query_params.get('search', None), request.user)
+
+    def get_data_groups(self, table: SynchronizedTables):
+        request = self.context.get('request')
+        return DataGroupDefaultSerializer(DataGroup.objects.filter(table_id=table.id), many=True).data
 
     def validate(self, attrs):
         is_virtual = attrs.get('is_virtual')

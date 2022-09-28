@@ -28,38 +28,51 @@ DAYS = (
 )
 
 
-def map_virtual(data, fields, show_on_map, table_geo_id, property_latitude, property_longitude):
+def map_virtual(id, data, fields, show_on_map, table_geo_id, property_latitude, property_longitude, property_icon):
     d = {}
     for field in fields:
         if field in data.keys():
             d[field] = data[field]
+    obj = {}
     if show_on_map:
         try:
             if 'table' in list(d.keys()) and table_geo_id == d['table'] and d[property_latitude] and d[property_longitude]:
-                d["point"] = {
+                obj["point"] = {
                     "longitude": float(d[property_longitude]),
                     "latitude": float(d[property_latitude])
                 }
             else:
                 try:
                     if d[property_latitude] and d[property_longitude]:
-                        d["point"] = {
+                        obj["point"] = {
                             "longitude": float(d[property_longitude]),
                             "latitude": float(d[property_latitude])
                         }
                     else:
-                        d["point"] = None
+                        obj["point"] = None
                 except KeyError:
                     if d[property_latitude] and d[property_longitude]:
-                        d["point"] = {
+                        obj["point"] = {
                             "longitude": float(d[property_longitude]),
                             "latitude": float(d[property_latitude])
                         }
                     else:
-                        d["point"] = None
+                        obj["point"] = None
+
+            if property_icon and property_icon in list(d.keys()):
+                obj[property_icon] = d[property_icon]
+
+            # if user:
+                #     if user.is_superuser:
+            for data_group in DataGroup.objects.filter(table_id=id):
+                for field in data_group.properties:
+                    property_field = field.get('Field')
+                    if property_field and property_field in list(d.keys()):
+                        obj[property_field] = d[property_field]
+
         except KeyError:
-            d['point'] = None
-    return d
+            obj['point'] = None
+    return obj
 
 
 class ModelBase(models.Model):
@@ -123,7 +136,7 @@ class SynchronizedTables(ModelBase):
                 data_format__contains=search
             )
 
-    def serialized_data(self, search=None):
+    def serialized_data(self, search=None, user=None):
         if self.is_virtual:
             fields = list(set([
                 (field.get('table'), field.get('Field')) for field in self.fields
@@ -132,11 +145,13 @@ class SynchronizedTables(ModelBase):
             relation: RelationsTable = self.relation
             serialized_data = []
             if search:
+                if not search.islower():
+                    search = search.lower()
                 data_one = relation.table_one.data.all().annotate(
-                    info_format=Cast('data', output_field=CharField())
+                    info_format=Lower(Cast('data', output_field=CharField()))
                 ).filter(info_format__contains=search).values_list('data', flat=True)
                 data_two = relation.table_two.data.all().annotate(
-                    info_format=Cast('data', output_field=CharField())
+                    info_format=Lower(Cast('data', output_field=CharField()))
                 ).filter(info_format__contains=search).values_list('data', flat=True)
             else:
                 data_one = relation.table_one.data.all().values_list('data', flat=True)
@@ -165,14 +180,17 @@ class SynchronizedTables(ModelBase):
             f = [field[1] for field in fields]
             return map(
                 lambda e: map_virtual(
-                    e, f, self.show_on_map, str(self.table_geo.id), self.property_latitude, self.property_longitude
+                    self.id, e, f, self.show_on_map, str(self.table_geo.id), self.property_latitude,
+                    self.property_longitude, self.property_icon
                 ),
                 serialized_data
             )
         else:
             if search:
+                if not search.islower():
+                    search = search.lower()
                 data = self.data.all().annotate(
-                    info_format=Cast('data', output_field=CharField())
+                    info_format=Lower(Cast('data', output_field=CharField()))
                 ).filter(info_format__contains=search).values_list('data', flat=True)
             else:
                 data = self.data.all().values_list('data', flat=True)
@@ -181,27 +199,40 @@ class SynchronizedTables(ModelBase):
             )
             serialized_data = []
             for d in data:
+                obj = {}
                 if self.show_on_map:
+                    if self.property_icon:
+                        obj[self.property_icon] = d[self.property_icon]
+
                     if d[self.property_longitude] and d[self.property_latitude]:
-                        d["point"] = {
+                        obj["point"] = {
                             "longitude": float(d[self.property_longitude]),
                             "latitude": float(d[self.property_latitude])
                         }
                     else:
-                        d["point"] = None
+                        obj["point"] = None
+
+                    # if user:
+                    #     if user.is_superuser:
+                    for data_group in DataGroup.objects.filter(table_id=self.id):
+                        for field in data_group.properties:
+                            property_field = field.get('Field')
+                            if property_field:
+                                obj[property_field] = d[property_field]
+
                 for relation in relations_table:
                     if relation.table_two.id == self.id:
                         data = [
                             d_one for d_one in relation.table_one.data.all().values_list('data', flat=True)
                             if d[relation.property_table_two] == d_one[relation.property_table_one]
                         ]
-                        d[relation.table_one.table] = data
+                        obj[relation.table_one.table] = data
                     else:
-                        d[relation.table_two.table] = [
+                        obj[relation.table_two.table] = [
                             d_two for d_two in relation.table_two.data.all().values_list('data', flat=True)
                             if d[relation.property_table_one] == d_two[relation.property_table_two]
                         ]
-                serialized_data.append(d)
+                serialized_data.append(obj)
         return serialized_data
 
 
