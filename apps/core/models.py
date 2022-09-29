@@ -160,7 +160,8 @@ class SynchronizedTables(ModelBase):
             for d_one in data_one:
                 keys_d_one = list(d_one.keys())
                 for d_two in data_two:
-                    if d_one[relation.property_table_one] == d_two[relation.property_table_two]:
+                    if relation.property_table_one in keys_d_one and \
+                            d_one[relation.property_table_one] == d_two[relation.property_table_two]:
                         if self.table_geo.id == relation.table_one.id:
                             d_one['table'] = str(relation.table_one.id)
                         else:
