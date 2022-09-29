@@ -160,24 +160,26 @@ class SynchronizedTables(ModelBase):
             for d_one in data_one:
                 keys_d_one = list(d_one.keys())
                 for d_two in data_two:
-                    if relation.property_table_one in keys_d_one and \
-                            d_one[relation.property_table_one] == d_two[relation.property_table_two]:
-                        if self.table_geo.id == relation.table_one.id:
-                            d_one['table'] = str(relation.table_one.id)
-                        else:
-                            d_one['table'] = str(relation.table_two.id)
-                        keys_d_two = list(d_two.keys())
-                        for key in keys_d_one:
-                            if key in keys_d_two:
-                                if self.table_geo.id == relation.table_one.id:
-                                    d_two[key+"1"] = d_two[key]
-                                    d_two.pop(key)
-                                else:
-                                    d_one[key + "1"] = d_one[key]
-                                    d_one.pop(key)
-                        d_one.update(d_two)
-                        serialized_data.append(d_one)
-                        break
+                    try:
+                        if d_one[relation.property_table_one] == d_two[relation.property_table_two]:
+                            if self.table_geo.id == relation.table_one.id:
+                                d_one['table'] = str(relation.table_one.id)
+                            else:
+                                d_one['table'] = str(relation.table_two.id)
+                            keys_d_two = list(d_two.keys())
+                            for key in keys_d_one:
+                                if key in keys_d_two:
+                                    if self.table_geo.id == relation.table_one.id:
+                                        d_two[key+"1"] = d_two[key]
+                                        d_two.pop(key)
+                                    else:
+                                        d_one[key + "1"] = d_one[key]
+                                        d_one.pop(key)
+                            d_one.update(d_two)
+                            serialized_data.append(d_one)
+                            break
+                    except KeyError:
+                        pass
             f = [field[1] for field in fields]
             return map(
                 lambda e: map_virtual(
