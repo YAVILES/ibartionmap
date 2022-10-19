@@ -33,7 +33,7 @@ class Connection(ModelBase):
     )
     database_name = models.CharField(max_length=255, verbose_name=_('database name'), null=True, blank=None)
     database_username = models.CharField(max_length=255, verbose_name=_('database username'), null=True, blank=None)
-    database_password = models.CharField(max_length=255, verbose_name=_('database password'), null=True, blank=None)
+    database_password = models.CharField(max_length=255, verbose_name=_('database password'), null=True, blank=True)
     database_port = models.IntegerField(verbose_name=_('database port'), null=True, blank=None)
     info_to_sync = models.JSONField(default=list)
     info_to_sync_selected = models.JSONField(default=list)

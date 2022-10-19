@@ -1,6 +1,7 @@
 import uuid
 import json
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import CharField
 from django.db.models.functions import Cast, Lower
 from django.db.models.query_utils import Q
@@ -28,7 +29,7 @@ DAYS = (
 )
 
 
-def map_virtual(id, data, fields, show_on_map, table_geo_id, property_latitude, property_longitude, property_icon):
+def map_virtual(table_id, data, fields, show_on_map, table_geo_id, property_latitude, property_longitude, property_icon):
     d = {}
     for field in fields:
         if field in data.keys():
@@ -64,7 +65,7 @@ def map_virtual(id, data, fields, show_on_map, table_geo_id, property_latitude, 
 
             # if user:
                 #     if user.is_superuser:
-            for data_group in DataGroup.objects.filter(table_id=id):
+            for data_group in DataGroup.objects.filter(table_id=table_id):
                 for field in data_group.properties:
                     property_field = field.get('Field')
                     if property_field and property_field in list(d.keys()):
@@ -137,6 +138,14 @@ class SynchronizedTables(ModelBase):
             )
 
     def serialized_data(self, search=None, user=None):
+        if search:
+            if not search.islower():
+                search = search.lower()
+            data = self.data.all().annotate(
+                info_format=Lower(Cast('data', output_field=CharField()))
+            ).filter(info_format__contains=search).values_list('data', flat=True)
+        else:
+            data = self.data.all().values_list('data', flat=True)
         if self.is_virtual:
             fields = list(set([
                 (field.get('table'), field.get('Field')) for field in self.fields
@@ -186,20 +195,9 @@ class SynchronizedTables(ModelBase):
                     self.id, e, f, self.show_on_map, str(self.table_geo.id), self.property_latitude,
                     self.property_longitude, self.property_icon
                 ),
-                serialized_data
+                data
             )
         else:
-            if search:
-                if not search.islower():
-                    search = search.lower()
-                data = self.data.all().annotate(
-                    info_format=Lower(Cast('data', output_field=CharField()))
-                ).filter(info_format__contains=search).values_list('data', flat=True)
-            else:
-                data = self.data.all().values_list('data', flat=True)
-            relations_table = RelationsTable.objects.filter(
-                Q(table_one__id=self.id) | Q(Q(two_dimensional=True) & Q(table_two__id=self.id))
-            )
             serialized_data = []
             for d in data:
                 obj = {}
@@ -217,24 +215,48 @@ class SynchronizedTables(ModelBase):
 
                     # if user:
                     #     if user.is_superuser:
+                    relation = None
                     for data_group in DataGroup.objects.filter(table_id=self.id):
                         for field in data_group.properties:
                             property_field = field.get('Field')
-                            if property_field:
+                            if property_field and field.get('relation') is None:
                                 obj[property_field] = d[property_field]
-
-                for relation in relations_table:
-                    if relation.table_two.id == self.id:
-                        data = [
-                            d_one for d_one in relation.table_one.data.all().values_list('data', flat=True)
-                            if d[relation.property_table_two] == d_one[relation.property_table_one]
-                        ]
-                        obj[relation.table_one.table] = data
-                    else:
-                        obj[relation.table_two.table] = [
-                            d_two for d_two in relation.table_two.data.all().values_list('data', flat=True)
-                            if d[relation.property_table_one] == d_two[relation.property_table_two]
-                        ]
+                            elif field.get('relation'):
+                                try:
+                                    if not relation or str(relation.id) != field.get('relation'):
+                                        relation = RelationsTable.objects.get(id=field.get('relation'))
+                                    if relation.table_two.id == self.id:
+                                        data = [
+                                            d_one for d_one in relation.table_one.data.all().values_list('data', flat=True)
+                                            if d[relation.property_table_two] == d_one[relation.property_table_one]
+                                        ]
+                                        obj[relation.table_one.table] = []
+                                        for e in data:
+                                            obj_r = {}
+                                            for data_group_r in DataGroup.objects.filter(
+                                                    table_id=relation.table_two.id
+                                            ):
+                                                for field_r in data_group_r.properties:
+                                                    property_field = field_r.get('Field')
+                                                    if property_field and field_r.get('relation') is None:
+                                                        obj_r[property_field] = e[property_field]
+                                            obj[relation.table_one.table].append(obj_r)
+                                    else:
+                                        data = [
+                                            d_two for d_two in relation.table_two.data.all().values_list('data', flat=True)
+                                            if d[relation.property_table_one] == d_two[relation.property_table_two]
+                                        ]
+                                        obj[relation.table_two.table] = []
+                                        for e in data:
+                                            obj_r = {}
+                                            for data_group_r in DataGroup.objects.filter(table_id=relation.table_two.id):
+                                                for field_r in data_group_r.properties:
+                                                    property_field = field_r.get('Field')
+                                                    if property_field and field_r.get('relation') is None:
+                                                        obj_r[property_field] = e[property_field]
+                                            obj[relation.table_two.table].append(obj_r)
+                                except ObjectDoesNotExist:
+                                    pass
                 serialized_data.append(obj)
         return serialized_data
 

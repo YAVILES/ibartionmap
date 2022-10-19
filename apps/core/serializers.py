@@ -1,4 +1,5 @@
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.db.models import Q
 from django_restql.mixins import DynamicFieldsMixin
 from rest_framework import serializers
 from django.utils.translation import ugettext_lazy as _
@@ -15,11 +16,25 @@ class SynchronizedTableDataDefaultSerializer(DynamicFieldsMixin, serializers.Mod
 class SynchronizedTablesSimpleDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
     table = serializers.CharField(required=True)
     alias = serializers.CharField(required=False)
+    full_fields = serializers.SerializerMethodField(read_only=True)
+
+    def get_full_fields(self, table: SynchronizedTables):
+        relations_table = RelationsTable.objects.filter(
+            Q(table_one__id=table.id) | Q(Q(two_dimensional=True) & Q(table_two__id=table.id))
+        )
+        fields = table.fields
+        keys = [field.get('Field') for field in fields if field.get('Field', None)]
+        for relation in relations_table:
+            if relation.table_two.id == table.id and relation.table_one.table not in keys:
+                fields.append({'Field': relation.table_one.table, 'relation': relation.id})
+            elif relation.table_two.table not in keys:
+                fields.append({'Field': relation.table_two.table, 'relation': relation.id})
+        return fields
 
     class Meta:
         model = SynchronizedTables
-        fields = ('id', 'table', 'alias', 'fields', 'show_on_map', 'property_latitude', 'property_longitude',
-                  'property_icon',)
+        fields = ('id', 'table', 'alias', 'full_fields', 'fields', 'show_on_map', 'property_latitude',
+                  'property_longitude', 'property_icon',)
 
 
 class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
@@ -28,6 +43,20 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
     alias = serializers.CharField(required=False)
     is_virtual = serializers.BooleanField(required=False, default=True)
     data_groups = serializers.SerializerMethodField(read_only=True)
+    full_fields = serializers.SerializerMethodField(read_only=True)
+
+    def get_full_fields(self, table: SynchronizedTables):
+        relations_table = RelationsTable.objects.filter(
+            Q(table_one__id=table.id) | Q(Q(two_dimensional=True) & Q(table_two__id=table.id))
+        )
+        fields = table.fields
+        keys = [field.get('Field') for field in fields if field.get('Field', None)]
+        for relation in relations_table:
+            if relation.table_two.id == table.id and relation.table_one.table not in keys:
+                fields.append({'Field': relation.table_one.table, 'relation': relation.id})
+            elif relation.table_two.table not in keys:
+                fields.append({'Field': relation.table_two.table, 'relation': relation.id})
+        return fields
 
     def get_serialized_data(self, table: SynchronizedTables):
         request = self.context.get('request')
