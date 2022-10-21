@@ -1,14 +1,12 @@
 import uuid
-import json
-
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import CharField
 from django.db.models.functions import Cast, Lower
-from django.db.models.query_utils import Q
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 from django.utils.functional import cached_property
 from bulk_update_or_create import BulkUpdateOrCreateQuerySet
+
 
 MONDAY = 0
 TUESDAY = 1
@@ -138,6 +136,7 @@ class SynchronizedTables(ModelBase):
             )
 
     def serialized_data(self, search=None, user=None):
+        from apps.core.serializers import DataGroupDefaultSerializer
         if search:
             if not search.islower():
                 search = search.lower()
@@ -232,14 +231,34 @@ class SynchronizedTables(ModelBase):
                                         ]
                                         obj[relation.table_one.table] = []
                                         for e in data:
-                                            obj_r = {}
+                                            obj_r = {
+                                                "data_groups": [],
+                                                "property_icon": relation.table_one.property_icon
+                                            }
                                             for data_group_r in DataGroup.objects.filter(
-                                                    table_id=relation.table_two.id
+                                                    table_id=relation.table_one.id
                                             ):
+                                                obj_r["data_groups"].append(
+                                                    DataGroupDefaultSerializer(data_group_r).data
+                                                )
                                                 for field_r in data_group_r.properties:
                                                     property_field = field_r.get('Field')
                                                     if property_field and field_r.get('relation') is None:
                                                         obj_r[property_field] = e[property_field]
+
+                                            if relation.table_one.show_on_map:
+                                                if relation.table_one.property_icon:
+                                                    obj_r[relation.table_one.property_icon] = \
+                                                        e[relation.table_one.property_icon]
+
+                                                if e[relation.table_one.property_longitude] and \
+                                                        e[relation.table_one.property_latitude]:
+                                                    obj_r["point"] = {
+                                                        "longitude": float(e[relation.table_one.property_longitude]),
+                                                        "latitude": float(e[relation.table_one.property_latitude])
+                                                    }
+                                                else:
+                                                    obj_r["point"] = None
                                             obj[relation.table_one.table].append(obj_r)
                                     else:
                                         data = [
@@ -248,12 +267,31 @@ class SynchronizedTables(ModelBase):
                                         ]
                                         obj[relation.table_two.table] = []
                                         for e in data:
-                                            obj_r = {}
+                                            obj_r = {
+                                                "data_groups": [],
+                                                "property_icon": relation.table_two.property_icon
+                                            }
                                             for data_group_r in DataGroup.objects.filter(table_id=relation.table_two.id):
+                                                obj_r["data_groups"].append(
+                                                    DataGroupDefaultSerializer(data_group_r).data
+                                                )
                                                 for field_r in data_group_r.properties:
                                                     property_field = field_r.get('Field')
                                                     if property_field and field_r.get('relation') is None:
                                                         obj_r[property_field] = e[property_field]
+                                            if relation.table_two.show_on_map:
+                                                if relation.table_two.property_icon:
+                                                    obj_r[relation.table_two.property_icon] = \
+                                                        e[relation.table_two.property_icon]
+
+                                                if e[relation.table_two.property_longitude] and \
+                                                        e[relation.table_two.property_latitude]:
+                                                    obj_r["point"] = {
+                                                        "longitude": float(e[relation.table_two.property_longitude]),
+                                                        "latitude": float(e[relation.table_two.property_latitude])
+                                                    }
+                                                else:
+                                                    obj_r["point"] = None
                                             obj[relation.table_two.table].append(obj_r)
                                 except ObjectDoesNotExist:
                                     pass
