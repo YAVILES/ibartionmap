@@ -94,6 +94,11 @@ class SynchronizedTables(ModelBase):
     )
     is_active = models.BooleanField(default=True)
     is_virtual = models.BooleanField(default=False)
+    relations = models.ManyToManyField(
+        'core.RelationsTable',
+        related_name=_('relations'),
+        verbose_name=_('relations')
+    )
 
     class Meta:
         verbose_name = _('synchronized table')
@@ -118,22 +123,6 @@ class SynchronizedTables(ModelBase):
                 data = cursor.fetchall()
                 connection_on_map.close()
         return data
-
-
-class SynchronizedTablesData(ModelBase):
-    relations = models.ManyToManyField(
-        'core.RelationsTable',
-        related_name=_('relations'),
-        verbose_name=_('relations')
-    )
-    table = models.ForeignKey(
-        SynchronizedTables,
-        verbose_name=_('table'),
-        related_name=_('data'),
-        on_delete=models.CASCADE
-    )
-    data = models.JSONField(default=dict)
-    objects = BulkUpdateOrCreateQuerySet.as_manager()
 
 
 class DataGroup(ModelBase):

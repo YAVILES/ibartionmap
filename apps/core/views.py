@@ -11,9 +11,9 @@ from rest_framework.viewsets import ModelViewSet
 from django_filters import rest_framework as filters
 
 from ibartionmap.utils.functions import connect_with_on_map
-from .models import SynchronizedTables, DataGroup, RelationsTable, SynchronizedTablesData
+from .models import SynchronizedTables, DataGroup, RelationsTable
 from .serializers import SynchronizedTablesDefaultSerializer, DataGroupDefaultSerializer, \
-    RelationsTableDefaultSerializer, SynchronizedTablesSimpleDefaultSerializer, SynchronizedTableDataDefaultSerializer
+    RelationsTableDefaultSerializer, SynchronizedTablesSimpleDefaultSerializer
 from ..setting.models import Connection
 
 
