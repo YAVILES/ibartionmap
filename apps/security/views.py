@@ -4,7 +4,7 @@ import random
 import tablib
 from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth.models import Group
-from django.db.models import Q, Value, Count, Exists, OuterRef
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter

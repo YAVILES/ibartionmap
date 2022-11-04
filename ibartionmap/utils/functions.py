@@ -3,6 +3,7 @@ from decimal import Decimal
 from json import JSONEncoder
 from uuid import UUID
 
+import psycopg2
 import pymysql.cursors
 from constance import config
 from constance.backends.database.models import Constance
@@ -11,6 +12,28 @@ from django.db.models import QuerySet
 
 from apps.setting.models import Connection
 from ibartionmap import settings
+import environ
+
+env = environ.Env(
+    # set casting, default value
+    DEBUG=(bool, True),
+    MEDIA_URL=(str, 'http://localhost:8000/media'),
+    SECRET_KEY=(str, '4)!6(7cj4wfibai#r%qk=o51ba-(^c-cevex_5e-3hr@4a8kr1'),
+    DATABASE=(str, 'btpb2b'),
+    DATABASE_USER=(str, 'postgres'),
+    DATABASE_PASSWORD=(str, 'postgres'),
+    DATABASE_HOST=(str, 'localhost'),
+    DATABASE_PORT=(int, 5432),
+    TIME_ZONE=(str, 'America/Caracas'),
+    EMAIL_PASSWORD=(str, 'passEmail'),
+    EMAIL_HOST_USER=(str, "example@gmail.com"),
+    EMAIL_HOST=(str, 'smtp.googlemail.com'),
+    EMAIL_PORT=(int, 587),
+    PREFIX_APP=(str, 'dev'),
+)
+
+# reading .env file
+environ.Env.read_env()
 
 
 class PythonObjectEncoder(JSONEncoder):
@@ -195,3 +218,55 @@ def connect_with_mysql(instance: Connection):
         cursorclass=pymysql.cursors.DictCursor
     )
     return connection
+
+
+def get_tipo_mysql_to_pg(typeField):
+    """
+        # Definir el tipo de dato de mysql a posgresql
+        :param typeField:
+        :return: str
+    """
+    if typeField.startswith("int") or typeField.startswith("tinyint"):
+        return "integer"
+    elif typeField.startswith("bigint"):
+        return "bigint"
+    elif typeField.startswith("datetime") or typeField.startswith("date"):
+        return "varchar(30)"
+        # return "timestamp without time zone"
+    elif typeField.startswith("float") or typeField.startswith("double"):
+        return "double precision"
+    elif typeField.startswith("varbinary"):
+        if typeField == "varbinary(0)":
+            return "bit"
+        return typeField.replace("varbinary", "bit")
+    elif typeField.startswith("binary"):
+        if typeField == "binary(0)":
+            return "bit"
+        return typeField.replace("binary", "bit")
+    else:
+        return typeField
+
+
+def connect_with_on_map():
+    connection = psycopg2.connect(
+        host=env('DATABASE_HOST'),
+        user=env('DATABASE_USER'),
+        password=env('DATABASE_PASSWORD'),
+        database=env('DATABASE'),
+        port=env('DATABASE_PORT')
+    )
+    return connection
+
+
+def get_name_table(connection, table_name):
+    return "{0}_{1}".format(connection.database_name, table_name)
+
+
+def formatter_field(field):
+    print(field)
+    if field is None:
+        return "NULL"
+    elif field == "0000-00-00":
+        return "''"
+    else:
+        return "'{0}'".format(field)

@@ -5,9 +5,10 @@ from celery import shared_task
 # Sincronización de tablas o recursos
 from django.core.exceptions import ObjectDoesNotExist
 
-from apps.core.models import SynchronizedTables, SynchronizedTablesData
+from apps.core.models import SynchronizedTables
 from apps.setting.models import Connection
-from ibartionmap.utils.functions import connect_with_mysql, PythonObjectEncoder
+from ibartionmap.utils.functions import connect_with_mysql, PythonObjectEncoder, get_name_table, connect_with_on_map, \
+    formatter_field
 
 
 @shared_task(name="sync_with_connection")
@@ -17,99 +18,54 @@ def sync_with_connection(connection_id):
         if instance.type == Connection.DB and instance.database_origin == Connection.MySQL:
             # Connect to the database
             connection = connect_with_mysql(instance)
+            connection_on_map = connect_with_on_map()
             with connection:
-                for table in instance.info_to_sync_selected:
-                    fields = []
+                for table_origin in instance.info_to_sync_selected:
+                    for info in instance.info_to_sync:
+                        if info.get('table') == get_name_table(instance, table_origin):
+                            fields_table = info.get('fields')
+                            for field in fields_table:
+                                field["selected"] = False
+                            break
+                    if fields_table is None:
+                        break
                     try:
                         synchronized_table = SynchronizedTables.objects.get(
-                            table=table, connection_id=connection_id, is_virtual=False
+                            table_origin=table_origin, connection_id=connection_id, is_virtual=False
                         )
                     except ObjectDoesNotExist:
-                        for info in instance.info_to_sync:
-                            if info.get('table') == table:
-                                fields_table = info.get('fields')
-                                for field in fields_table:
-                                    field["selected"] = False
-                                break
-                        if fields_table is None:
-                            break
-                        else:
-                            synchronized_table = SynchronizedTables.objects.create(
-                                table=table,
-                                alias="",
-                                fields=fields_table,
-                                show_on_map=False,
-                                property_latitude=None,
-                                property_longitude=None,
-                                is_virtual=False,
-                                connection=instance
-                            )
+                        synchronized_table = SynchronizedTables.objects.create(
+                            table_origin=table_origin,
+                            table=get_name_table(instance, table_origin),
+                            alias="",
+                            fields=fields_table,
+                            is_virtual=False,
+                            connection=instance
+                        )
 
-                    for field in synchronized_table.fields:
-                        if field.get("selected") and field.get("relation") is None:
-                            fields.append(field["Field"])
+                    fields = [field["Field"] for field in fields_table]
                     if fields:
                         with connection.cursor() as cursor:
-                            sql = "SELECT " + ", ".join(map(str, fields)) + " FROM " + table
+                            sql = "SELECT " + ", ".join(map(str, fields)) + " FROM " + table_origin
                             cursor.execute(sql)
                             results = cursor.fetchall()
-                            items = []
-                            for d in json.loads(json.dumps(results, cls=PythonObjectEncoder)):
-                                items.append(
-                                    SynchronizedTablesData(
-                                        table_id=synchronized_table.id,
-                                        data=d
-                                    )
+                            data = json.loads(json.dumps(results, cls=PythonObjectEncoder))
+                            try:
+                                cursor_on_map = connection_on_map.cursor()
+                                sql = "INSERT INTO {0} ({1}) VALUES".format(
+                                    get_name_table(instance, table_origin),
+                                    ", ".join(map(str, data[0].keys()))
                                 )
-                            SynchronizedTablesData.objects.filter(table_id=synchronized_table.id).delete()
-                            SynchronizedTablesData.objects.bulk_create(items)
-
-                for synchronized_table in SynchronizedTables.objects.filter(
-                        is_virtual=True,
-                        relation__table_one__connection_id=connection_id,
-                        relation__table_two__connection_id=connection_id
-                ):
-                    if synchronized_table.fields:
-                        fields = list(set([
-                            (field.get('table'), field.get('Field')) for field in synchronized_table.fields
-                            if not field.get('table', None) is None and not field.get('Field') is None
-                        ]))
-                        data = []
-                        relation = synchronized_table.relation
-                        data_one = relation.table_one.data.all().values_list('data', flat=True)
-                        data_two = relation.table_two.data.all().values_list('data', flat=True)
-                        for d_one in data_one:
-                            keys_d_one = list(d_one.keys())
-                            for d_two in data_two:
-                                try:
-                                    if d_one[relation.property_table_one] == d_two[relation.property_table_two]:
-                                        if synchronized_table.table_geo.id == relation.table_one.id:
-                                            d_one['table'] = str(relation.table_one.id)
-                                        else:
-                                            d_one['table'] = str(relation.table_two.id)
-                                        keys_d_two = list(d_two.keys())
-                                        for key in keys_d_one:
-                                            if key in keys_d_two:
-                                                if synchronized_table.table_geo.id == relation.table_one.id:
-                                                    d_two[key + "1"] = d_two[key]
-                                                    d_two.pop(key)
-                                                else:
-                                                    d_one[key + "1"] = d_one[key]
-                                                    d_one.pop(key)
-                                        d_one.update(d_two)
-                                        data.append(d_one)
-                                        break
-                                except KeyError:
-                                    pass
-                        for d in json.loads(json.dumps(data, cls=PythonObjectEncoder)):
-                            items.append(
-                                SynchronizedTablesData(
-                                    table_id=synchronized_table.id,
-                                    data=d
-                                )
-                            )
-                        SynchronizedTablesData.objects.filter(table_id=synchronized_table.id).delete()
-                        SynchronizedTablesData.objects.bulk_create(items)
-
+                                records = [" ({0})".format(", ".join(map(formatter_field, d.values()))) for d in data]
+                                sql += ", ".join(map(str, records))
+                                cursor_on_map.execute(sql)
+                                connection_on_map.commit()
+                            except Exception as e:
+                                return {
+                                    "sql": sql,
+                                    "fields_table": fields_table,
+                                    "error": e.__str__()
+                                }
+            connection_on_map.close()
     except ValueError as e:
         print(e.__str__())

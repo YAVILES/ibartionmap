@@ -9,11 +9,11 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from django_filters import rest_framework as filters
-import pymysql.cursors
 
-from ibartionmap.utils.functions import connect_with_mysql
+from ibartionmap.utils.functions import connect_with_mysql, connect_with_on_map, get_tipo_mysql_to_pg, get_name_table
 from .models import Connection
 from .serializers import ConnectionDefaultSerializer, TaskResultDefaultSerializer, IntervalScheduleSerializer
+from .tasks import sync_with_connection
 from ..core.models import SynchronizedTables
 
 
@@ -36,7 +36,7 @@ class ConnectionViewSet(ModelViewSet):
 
     def paginate_queryset(self, queryset):
         """
-        Return a single page of results, or `None` if pagination is disabled.
+        Return a single page of results, or None if pagination is disabled.
         """
         not_paginator = self.request.query_params.get('not_paginator', None)
         if self.paginator is None or not_paginator:
@@ -91,40 +91,68 @@ class ConnectionViewSet(ModelViewSet):
 
                     for t in list(tables):
                         table = t["Tables_in_" + instance.database_name]
-                        with connection.cursor() as cursor:
+                        with connection.cursor() as cursorTablas:
                             try:
                                 # Read a single record
                                 sql = "SHOW COLUMNS FROM " + table
-                                cursor.execute(sql)
-                                fields = cursor.fetchall()
+                                cursorTablas.execute(sql)
+                                fields = cursorTablas.fetchall()
                                 result.append({
-                                    "table": table,
+                                    "table": get_name_table(instance, table),
+                                    "table_origin": table,
                                     "fields": list(fields)
                                 })
-                                try:
-                                    synchronized_table = SynchronizedTables.objects.get(table=table)
-                                    for field in list(fields):
-                                        if not list(
-                                                filter(
-                                                    lambda x: (x.get('Field') == field.get('Field')),
-                                                    list(synchronized_table.fields)
-                                                )
-                                        ):
-                                            fields_new = list(synchronized_table.fields)
-                                            fields_new.append(field)
-                                            synchronized_table.fields = fields_new
-                                            synchronized_table.save(update_fields=['fields'])
-                                except ObjectDoesNotExist:
-                                    pass
                             except Exception as e:
                                 return Response({
                                     "table": table,
                                     "error": e.__str__()
                                 }, status=status.HTTP_400_BAD_REQUEST)
-
-                    instance.info_to_sync = result
-                    instance.save(update_fields=["info_to_sync"])
-
+                    sql = ""
+                    fields_table = []
+                try:
+                    connection_on_map = connect_with_on_map()
+                    cursor = connection_on_map.cursor()
+                    for data in result:
+                        fields_table = []
+                        for field in data["fields"]:
+                            if field["Field"].startswith("MAX("):
+                                break
+                            char_null = "NOT NULL" if field["Null"] == "NO" else ""
+                            char_type = get_tipo_mysql_to_pg(field["Type"])
+                            fields_table.append(
+                                "{0} {1} {2}".format(field["Field"], char_type, char_null)
+                            )
+                        sql = "DROP TABLE IF EXISTS {0}".format(data["table"])
+                        cursor.execute(sql)
+                        connection_on_map.commit()
+                        sql = "CREATE TABLE {0} ({1});".format(data["table"], ", ".join(map(str, fields_table)))
+                        cursor.execute(sql)
+                        connection_on_map.commit()
+                        try:
+                            synchronized_table = SynchronizedTables.objects.get(
+                                table_origin=data["table_origin"], connection_id=instance.id
+                            )
+                            synchronized_table.fields = list(data["fields"])
+                            synchronized_table.save(update_fields=['fields'])
+                        except ObjectDoesNotExist:
+                            SynchronizedTables.objects.create(
+                                table_origin=data["table_origin"],
+                                table=data["table"],
+                                alias="",
+                                fields=data["fields"],
+                                is_virtual=False,
+                                connection_id=instance.id
+                            )
+                    connection_on_map.close()
+                except Exception as e:
+                    return Response({
+                        "sql": sql,
+                        "fields_table": fields_table,
+                        "error": e.__str__()
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                instance.info_to_sync = result
+                instance.save(update_fields=["info_to_sync"])
+            result = sync_with_connection(instance.id)
             return Response(result, status=status.HTTP_200_OK)
         except Exception as e:
             return Response(e.__str__(), status=status.HTTP_400_BAD_REQUEST)
@@ -138,7 +166,7 @@ class TaskResultViewSet(ModelViewSet):
 
     def paginate_queryset(self, queryset):
         """
-        Return a single page of results, or `None` if pagination is disabled.
+        Return a single page of results, or None if pagination is disabled.
         """
         not_paginator = self.request.query_params.get('not_paginator', None)
 

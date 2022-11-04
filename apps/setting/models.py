@@ -59,6 +59,7 @@ class Connection(ModelBase):
 
 def post_save_connection(sender, instance: Connection, **kwargs):
     created = kwargs['created']
+    from ibartionmap.utils.functions import get_name_table
     if created:
         if instance.type == Connection.DB and instance.info_to_sync_selected:
             schedule, created = IntervalSchedule.objects.get_or_create(
@@ -75,29 +76,27 @@ def post_save_connection(sender, instance: Connection, **kwargs):
             instance.periodic_task_id = periodic_task.id
             instance.save(update_fields=["periodic_task_id"])
     else:
-        for table in instance.info_to_sync_selected:
+        for table_origin in instance.info_to_sync_selected:
             try:
-                synchronized_table = SynchronizedTables.objects.get(connection_id=instance.id, table=table)
+                synchronized_table = SynchronizedTables.objects.get(connection_id=instance.id, table_origin=table_origin)
                 if not synchronized_table.is_active:
                     synchronized_table.is_active = True
                     synchronized_table.save(update_fields=['is_active'])
             except ObjectDoesNotExist:
                 for info in instance.info_to_sync:
-                    if info.get('table') == table:
+                    if info.get('table') == table_origin:
                         fields = info.get('fields')
                         for field in fields:
                             field["selected"] = False
                         break
-                synchronized_table = SynchronizedTables.objects.create(
-                    table=table,
+                SynchronizedTables.objects.create(
+                    table_origin=table_origin,
+                    table=get_name_table(instance, table_origin),
                     alias="",
-                    fields=fields,
-                    data=[],
-                    show_on_map=False,
-                    property_latitude=None,
-                    property_longitude=None,
+                    fields=list(fields),
                     connection=instance
                 )
+
         SynchronizedTables.objects.filter(
             connection_id=instance.id
         ).exclude(

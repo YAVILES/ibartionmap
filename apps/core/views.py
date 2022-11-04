@@ -1,6 +1,7 @@
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
+from psycopg2.extras import RealDictCursor
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
@@ -9,16 +10,17 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from django_filters import rest_framework as filters
 
-from .models import SynchronizedTables, DataGroup, RelationsTable
+from ibartionmap.utils.functions import connect_with_on_map
+from .models import SynchronizedTables, DataGroup, RelationsTable, SynchronizedTablesData
 from .serializers import SynchronizedTablesDefaultSerializer, DataGroupDefaultSerializer, \
-    RelationsTableDefaultSerializer, SynchronizedTablesSimpleDefaultSerializer
+    RelationsTableDefaultSerializer, SynchronizedTablesSimpleDefaultSerializer, SynchronizedTableDataDefaultSerializer
 from ..setting.models import Connection
 
 
 class SynchronizedTablesFilter(filters.FilterSet):
     class Meta:
         model = SynchronizedTables
-        fields = ['table', 'alias', 'show_on_map', 'is_active', 'connection_id', 'is_virtual', 'relation']
+        fields = ['table', 'alias', 'is_active', 'connection_id', 'is_virtual']
 
 
 class SynchronizedTablesViewSet(ModelViewSet):
@@ -109,8 +111,6 @@ class SynchronizedTablesViewSet(ModelViewSet):
                 for info in connection.info_to_sync:
                     if info.get('table') == table:
                         fields = info.get('fields')
-                        for field in fields:
-                            field["selected"] = False
                         break
                 if fields is None:
                     return Response(
@@ -121,7 +121,6 @@ class SynchronizedTablesViewSet(ModelViewSet):
                     table=table,
                     alias="",
                     fields=fields,
-                    show_on_map=False,
                     property_latitude=None,
                     property_longitude=None,
                     is_virtual=False,
@@ -136,6 +135,100 @@ class SynchronizedTablesViewSet(ModelViewSet):
                 {"error": "Debes enviar el id de la conexion y el nombre de la tabla"},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+    @action(methods=['POST'], detail=False)
+    def virtual_preview(self, request):
+        data = request.data
+
+        table_data = SynchronizedTablesDefaultSerializer(
+            SynchronizedTables(
+                alias="",
+                fields=data["fields"],
+                is_virtual=True
+            )
+        ).data
+
+        tables = []
+        tables_names = []
+        where = ""
+        result = []
+        fields = ""
+        for relation in data['relations']:
+            table_one = SynchronizedTables.objects.get(id=relation["table_one"])
+            table_two = SynchronizedTables.objects.get(id=relation["table_two"])
+            if where == "":
+                where += "WHERE {0}.{1} = {2}.{3}".format(
+                    table_one.table, relation["property_table_one"], table_two.table, relation["property_table_two"]
+                )
+            else:
+                where += " AND {0}.{1} = {2}.{3}".format(
+                    table_one.table, relation["property_table_one"], table_two.table, relation["property_table_two"]
+                )
+
+            if relation["table_one"] not in tables:
+                if fields != "":
+                    fields += ", "
+                tables_names.append(table_one.table)
+                tables.append(relation["table_one"])
+                fields_table = [
+                    "{0}.{1}".format(table_one.table, field.get('Field')) for field in filter(
+                        lambda field: field.get('table') == relation["table_one"],
+                        data['fields']
+                    )
+                ]
+                fields += ", ".join(map(str, fields_table))
+
+            if relation["table_two"] not in tables:
+                if fields != "":
+                    fields += ", "
+                tables_names.append(table_two.table)
+                tables.append(relation["table_two"])
+                fields_table = [
+                    "{0}.{1}".format(table_two.table, field.get('Field')) for field in filter(
+                        lambda field: field.get('table') == relation["table_two"],
+                        data['fields']
+                    )
+                ]
+                fields += ", ".join(map(str, fields_table))
+
+        for table_id in data['tables']:
+            if table_id not in tables:
+                if fields != "":
+                    fields += ", "
+                tables.append(table_id)
+                table = SynchronizedTables.objects.get(id=table_id)
+                tables_names.append(table.table)
+                fields_table = [
+                    "{0}.{1}".format(table.table, field.get('Field')) for field in filter(
+                        lambda field: field.get('table') == table_id,
+                        data['fields']
+                    )
+                ]
+                fields += ", ".join(map(str, fields_table))
+
+        if fields:
+            try:
+                connection_on_map = connect_with_on_map()
+                cursor = connection_on_map.cursor(cursor_factory=RealDictCursor)
+                sql = "SELECT {0} FROM {1} {2}".format(fields, ", ".join(map(str, tables_names)), where)
+                cursor.execute(sql)
+                result = cursor.fetchall()
+                connection_on_map.close()
+            except Exception as e:
+                connection_on_map.close()
+                return Response(
+                    {
+                        "sql": sql,
+                        "error": e.__str__()
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        table_data["details"] = result
+        return Response(
+            table_data,
+            status=status.HTTP_200_OK
+        )
 
 
 class DataGroupFilter(filters.FilterSet):
