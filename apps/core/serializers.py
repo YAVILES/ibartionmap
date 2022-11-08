@@ -77,10 +77,10 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
             with transaction.atomic():
                 validated_data['table'] = ""
                 for table in validated_data.get('tables', []):
-                    validated_data['table'] += "{0}_".format(
+                    validated_data['table'] += "{0}".format(
                         table.table_origin
                     )
-                validated_data['table'] += "virtual"
+
                 try:
                     SynchronizedTables.objects.get(table=validated_data['table'])
                     validated_data['table'] += str(get_table_repeat_number(validated_data['table']))
@@ -104,6 +104,33 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
         except ValidationError as error:
             raise serializers.ValidationError(detail={"error": error.messages})
         return validated_data
+
+    def update(self, instance, validated_data):
+        try:
+            with transaction.atomic():
+                validated_data['table'] = ""
+                for table in validated_data.get('tables', []):
+                    validated_data['table'] += "{0}".format(
+                        table.table_origin
+                    )
+                if validated_data.get('is_virtual', False):
+                    validated_data['sql'] = generate_virtual_sql(validated_data)
+                    relations = []
+                    RelationsTable.objects.filter(id__in=[rel.id for rel in instance.relations]).delete()
+                    for relation in validated_data.pop('relations_table', []):
+                        rel = RelationsTable.objects.create(
+                            table_one_id=relation["table_one"],
+                            table_two_id=relation["table_two"],
+                            property_table_one=relation["property_table_one"],
+                            property_table_two=relation["property_table_two"]
+                        )
+                        relations.append(rel.id)
+                    validated_data['relations'] = relations
+                synchronized_table = super(SynchronizedTablesDefaultSerializer, self).update(instance, validated_data)
+                return synchronized_table
+        except ValidationError as error:
+            raise serializers.ValidationError(detail={"error": error.messages})
+        return instance
 
     class Meta:
         model = SynchronizedTables

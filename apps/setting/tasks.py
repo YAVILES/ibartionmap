@@ -8,7 +8,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from apps.core.models import SynchronizedTables
 from apps.setting.models import Connection
 from ibartionmap.utils.functions import connect_with_mysql, PythonObjectEncoder, get_name_table, connect_with_on_map, \
-    formatter_field
+    formatter_field, create_table_virtual
 
 
 @shared_task(name="sync_with_connection")
@@ -30,7 +30,7 @@ def sync_with_connection(connection_id):
                     if fields_table is None:
                         break
                     try:
-                        synchronized_table = SynchronizedTables.objects.get(
+                        SynchronizedTables.objects.get(
                             table_origin=table_origin, connection_id=connection_id, is_virtual=False
                         )
                     except ObjectDoesNotExist:
@@ -66,6 +66,8 @@ def sync_with_connection(connection_id):
                                     "fields_table": fields_table,
                                     "error": e.__str__()
                                 }
+                for table in SynchronizedTables.objects.filter(is_virtual=True):
+                    create_table_virtual(table)
             connection_on_map.close()
     except ValueError as e:
         print(e.__str__())
