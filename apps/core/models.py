@@ -1,9 +1,12 @@
+import json
 import uuid
+
+from django.db.models.signals import post_save
 from psycopg2.extras import RealDictCursor
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 from django.utils.functional import cached_property
-from bulk_update_or_create import BulkUpdateOrCreateQuerySet
+from sequences import get_next_value
 
 MONDAY = 0
 TUESDAY = 1
@@ -81,9 +84,13 @@ class ModelBase(models.Model):
         abstract = True
 
 
+def get_table_repeat_number(table_name: str):
+    return get_next_value(table_name)
+
+
 class SynchronizedTables(ModelBase):
     table_origin = models.CharField(max_length=100, verbose_name=_('table_origin'), default=None, null=True)
-    table = models.CharField(max_length=100, verbose_name=_('table'), unique=True)
+    table = models.CharField(max_length=100, verbose_name=_('table'))
     alias = models.CharField(max_length=255, verbose_name=_('alias'))
     fields = models.JSONField(default=list)
     connection = models.ForeignKey(
@@ -99,6 +106,12 @@ class SynchronizedTables(ModelBase):
         related_name=_('relations'),
         verbose_name=_('relations')
     )
+    sql = models.TextField(blank=True, null=True)
+    tables = models.ManyToManyField(
+        'self',
+        related_name=_('tables'),
+        verbose_name=_('tables')
+    )
 
     class Meta:
         verbose_name = _('synchronized table')
@@ -113,15 +126,21 @@ class SynchronizedTables(ModelBase):
         # search = self.request.query_params.get('search', None)
 
         data = []
-        fields = [field["Field"] for field in self.fields if field.get("selected") is True]
-        if fields:
-            if not self.is_virtual:
-                connection_on_map = connect_with_on_map()
-                cursor = connection_on_map.cursor(cursor_factory=RealDictCursor)
-                sql = "SELECT {0} FROM {1}".format(", ".join(map(str, fields)), self.table)
-                cursor.execute(sql)
-                data = cursor.fetchall()
-                connection_on_map.close()
+        connection_on_map = connect_with_on_map()
+        if self.is_virtual:
+            fields = [field["alias"] for field in self.fields]
+            cursor = connection_on_map.cursor(cursor_factory=RealDictCursor)
+            sql = "SELECT {0} FROM {1}".format(", ".join(map(str, fields)), self.table)
+            cursor.execute(sql)
+            data = cursor.fetchall()
+        else:
+            fields = [field["Field"] for field in self.fields if field.get("selected") is True]
+            connection_on_map = connect_with_on_map()
+            cursor = connection_on_map.cursor(cursor_factory=RealDictCursor)
+            sql = "SELECT {0} FROM {1}".format(", ".join(map(str, fields)), self.table)
+            cursor.execute(sql)
+            data = cursor.fetchall()
+        connection_on_map.close()
         return data
 
 
@@ -158,3 +177,12 @@ class RelationsTable(ModelBase):
 
     def __str__(self):
         return self.table_one.table + " - " + self.table_two.table
+
+
+def post_save_synchronized_table(sender, instance: SynchronizedTables, **kwargs):
+    from ibartionmap.utils.functions import create_table_virtual
+    if instance.is_virtual:
+        create_table_virtual(instance)
+
+
+post_save.connect(post_save_synchronized_table, sender=SynchronizedTables)

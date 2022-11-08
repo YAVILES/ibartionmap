@@ -1,10 +1,12 @@
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.db import transaction
 from django.db.models import Q
 from django_restql.mixins import DynamicFieldsMixin
 from rest_framework import serializers
 from django.utils.translation import ugettext_lazy as _
 
-from .models import SynchronizedTables, DataGroup, RelationsTable
+from ibartionmap.utils.functions import generate_virtual_sql
+from .models import SynchronizedTables, DataGroup, RelationsTable, get_table_repeat_number
 
 
 class SynchronizedTablesSimpleDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
@@ -16,37 +18,97 @@ class SynchronizedTablesSimpleDefaultSerializer(DynamicFieldsMixin, serializers.
         fields = ('id', 'table', 'alias', 'fields')
 
 
+class RelationsCreateTableSerializer(serializers.ModelSerializer):
+    table_one = serializers.UUIDField(required=True)
+    table_two = serializers.UUIDField(required=True)
+    property_table_one = serializers.CharField(max_length=100, required=True)
+    property_table_two = serializers.CharField(max_length=100, required=True)
+
+    class Meta:
+        model = RelationsTable
+        fields = serializers.ALL_FIELDS
+
+
+class RelationsTableDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
+    table_one = serializers.PrimaryKeyRelatedField(
+        queryset=SynchronizedTables.objects.all(),
+        required=True
+    )
+    table_two = serializers.PrimaryKeyRelatedField(
+        queryset=SynchronizedTables.objects.all(),
+        required=True
+    )
+    table_one_display = SynchronizedTablesSimpleDefaultSerializer(read_only=True, source="table_one")
+    table_two_display = SynchronizedTablesSimpleDefaultSerializer(read_only=True, source="table_two")
+    property_table_one = serializers.CharField(max_length=100, required=True)
+    property_table_two = serializers.CharField(max_length=100, required=True)
+
+    class Meta:
+        model = RelationsTable
+        fields = serializers.ALL_FIELDS
+
+
 class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
+    table_origin = serializers.CharField(required=False)
     table = serializers.CharField(required=False)
     alias = serializers.CharField(required=False)
     data_groups = serializers.SerializerMethodField(read_only=True)
+    relations = serializers.PrimaryKeyRelatedField(
+        queryset=RelationsTable.objects.all(),
+        many=True,
+        required=False
+    )
+    relations_table = RelationsCreateTableSerializer(many=True, required=False)
 
     def get_data_groups(self, table: SynchronizedTables):
         request = self.context.get('request')
         return DataGroupDefaultSerializer(DataGroup.objects.filter(table_id=table.id), many=True).data
 
     def validate(self, attrs):
-        is_virtual = attrs.get('is_virtual')
-        if is_virtual:
-            relation: RelationsTable = attrs.get('tables', None)
-            if relation is None:
-                raise serializers.ValidationError(detail={
-                    'error': "Debe identificar las tablas a utilizar"
-                })
-            alias = str(attrs.get('alias'))
-            attrs['table'] = "{0}_{1}_{2}".format(
-                relation.table_one.table, relation.table_two.table, alias.replace(" ", "").lower()
-            )
+        if attrs.get('is_virtual', False):
             if SynchronizedTables.objects.filter(alias=attrs['alias']).exists():
                 raise serializers.ValidationError(detail={
-                    'error': "Ya existe una tabla con este nombre"
+                    'error': "Ya existe una tabla con este alias"
                 })
         return attrs
+
+    def create(self, validated_data):
+        try:
+            with transaction.atomic():
+                validated_data['table'] = ""
+                for table in validated_data.get('tables', []):
+                    validated_data['table'] += "{0}_".format(
+                        table.table_origin
+                    )
+                validated_data['table'] += "virtual"
+                try:
+                    SynchronizedTables.objects.get(table=validated_data['table'])
+                    validated_data['table'] += str(get_table_repeat_number(validated_data['table']))
+                except ObjectDoesNotExist:
+                    pass
+
+                if validated_data.get('is_virtual', False):
+                    validated_data['sql'] = generate_virtual_sql(validated_data)
+                    relations = []
+                    for relation in validated_data.pop('relations_table', []):
+                        rel = RelationsTable.objects.create(
+                            table_one_id=relation["table_one"],
+                            table_two_id=relation["table_two"],
+                            property_table_one=relation["property_table_one"],
+                            property_table_two=relation["property_table_two"]
+                        )
+                        relations.append(rel.id)
+                    validated_data['relations'] = relations
+                synchronized_table = super(SynchronizedTablesDefaultSerializer, self).create(validated_data)
+                return synchronized_table
+        except ValidationError as error:
+            raise serializers.ValidationError(detail={"error": error.messages})
+        return validated_data
 
     class Meta:
         model = SynchronizedTables
         fields = ('id', 'table_origin', 'table', 'alias', 'fields', 'connection_id', 'is_active', 'is_virtual',
-                  'data_groups', 'details',)
+                  'data_groups', 'details', 'relations', 'relations_table', 'sql', 'tables',)
 
 
 class DataGroupDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
@@ -84,23 +146,3 @@ class DataGroupDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer
     class Meta:
         model = DataGroup
         fields = serializers.ALL_FIELDS
-
-
-class RelationsTableDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
-    table_one = serializers.PrimaryKeyRelatedField(
-        queryset=SynchronizedTables.objects.all(),
-        required=True
-    )
-    table_two = serializers.PrimaryKeyRelatedField(
-        queryset=SynchronizedTables.objects.all(),
-        required=True
-    )
-    table_one_display = SynchronizedTablesSimpleDefaultSerializer(read_only=True, source="table_one")
-    table_two_display = SynchronizedTablesSimpleDefaultSerializer(read_only=True, source="table_two")
-    property_table_one = serializers.CharField(max_length=100, required=True)
-    property_table_two = serializers.CharField(max_length=100, required=True)
-
-    class Meta:
-        model = RelationsTable
-        fields = serializers.ALL_FIELDS
-

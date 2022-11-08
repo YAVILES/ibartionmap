@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from django_filters import rest_framework as filters
 
-from ibartionmap.utils.functions import connect_with_on_map
+from ibartionmap.utils.functions import connect_with_on_map, generate_virtual_sql, create_table_virtual
 from .models import SynchronizedTables, DataGroup, RelationsTable
 from .serializers import SynchronizedTablesDefaultSerializer, DataGroupDefaultSerializer, \
     RelationsTableDefaultSerializer, SynchronizedTablesSimpleDefaultSerializer
@@ -139,7 +139,6 @@ class SynchronizedTablesViewSet(ModelViewSet):
     @action(methods=['POST'], detail=False)
     def virtual_preview(self, request):
         data = request.data
-
         table_data = SynchronizedTablesDefaultSerializer(
             SynchronizedTables(
                 alias="",
@@ -147,70 +146,12 @@ class SynchronizedTablesViewSet(ModelViewSet):
                 is_virtual=True
             )
         ).data
-
-        tables = []
-        tables_names = []
-        where = ""
         result = []
-        fields = ""
-        for relation in data['relations']:
-            table_one = SynchronizedTables.objects.get(id=relation["table_one"])
-            table_two = SynchronizedTables.objects.get(id=relation["table_two"])
-            if where == "":
-                where += "WHERE {0}.{1} = {2}.{3}".format(
-                    table_one.table, relation["property_table_one"], table_two.table, relation["property_table_two"]
-                )
-            else:
-                where += " AND {0}.{1} = {2}.{3}".format(
-                    table_one.table, relation["property_table_one"], table_two.table, relation["property_table_two"]
-                )
-
-            if relation["table_one"] not in tables:
-                if fields != "":
-                    fields += ", "
-                tables_names.append(table_one.table)
-                tables.append(relation["table_one"])
-                fields_table = [
-                    "{0}.{1}".format(table_one.table, field.get('Field')) for field in filter(
-                        lambda field: field.get('table') == relation["table_one"],
-                        data['fields']
-                    )
-                ]
-                fields += ", ".join(map(str, fields_table))
-
-            if relation["table_two"] not in tables:
-                if fields != "":
-                    fields += ", "
-                tables_names.append(table_two.table)
-                tables.append(relation["table_two"])
-                fields_table = [
-                    "{0}.{1}".format(table_two.table, field.get('Field')) for field in filter(
-                        lambda field: field.get('table') == relation["table_two"],
-                        data['fields']
-                    )
-                ]
-                fields += ", ".join(map(str, fields_table))
-
-        for table_id in data['tables']:
-            if table_id not in tables:
-                if fields != "":
-                    fields += ", "
-                tables.append(table_id)
-                table = SynchronizedTables.objects.get(id=table_id)
-                tables_names.append(table.table)
-                fields_table = [
-                    "{0}.{1}".format(table.table, field.get('Field')) for field in filter(
-                        lambda field: field.get('table') == table_id,
-                        data['fields']
-                    )
-                ]
-                fields += ", ".join(map(str, fields_table))
-
-        if fields:
+        sql = generate_virtual_sql(data)
+        if sql:
             try:
                 connection_on_map = connect_with_on_map()
                 cursor = connection_on_map.cursor(cursor_factory=RealDictCursor)
-                sql = "SELECT {0} FROM {1} {2}".format(fields, ", ".join(map(str, tables_names)), where)
                 cursor.execute(sql)
                 result = cursor.fetchall()
                 connection_on_map.close()
@@ -225,10 +166,20 @@ class SynchronizedTablesViewSet(ModelViewSet):
                 )
 
         table_data["details"] = result
+        table_data["sql"] = sql
         return Response(
             table_data,
             status=status.HTTP_200_OK
         )
+
+    @action(methods=['POST'], detail=True)
+    def test_create(self, request, pk):
+        instance: SynchronizedTables = self.get_object()
+        try:
+            result = create_table_virtual(instance)
+            return Response(result, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response(e.__str__(), status=status.HTTP_400_BAD_REQUEST)
 
 
 class DataGroupFilter(filters.FilterSet):

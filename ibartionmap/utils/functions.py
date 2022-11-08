@@ -1,4 +1,5 @@
 import datetime
+import json
 from decimal import Decimal
 from json import JSONEncoder
 from uuid import UUID
@@ -7,8 +8,9 @@ import psycopg2
 import pymysql.cursors
 from constance import config
 from constance.backends.database.models import Constance
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db.models import QuerySet
+from rest_framework import serializers
 
 from apps.setting.models import Connection
 from ibartionmap import settings
@@ -270,3 +272,108 @@ def formatter_field(field):
         return "''"
     else:
         return "'{0}'".format(field)
+
+
+def generate_virtual_sql(data):
+    from apps.core.models import SynchronizedTables
+    tables = []
+    tables_names = []
+    where = ""
+    fields = ""
+    try:
+        if isinstance(data['tables'][0], SynchronizedTables):
+            data['tables'] = [str(table.id) for table in data['tables']]
+
+        for relation in data['relations_table']:
+            table_one = SynchronizedTables.objects.get(pk=relation.get('table_one'))
+            table_two = SynchronizedTables.objects.get(pk=relation.get('table_two'))
+            if where == "":
+                where += "WHERE {0}.{1} = {2}.{3}".format(
+                    table_one.table, relation["property_table_one"], table_two.table, relation["property_table_two"]
+                )
+            else:
+                where += " AND {0}.{1} = {2}.{3}".format(
+                    table_one.table, relation["property_table_one"], table_two.table, relation["property_table_two"]
+                )
+
+            if relation["table_one"] not in tables:
+                if fields != "":
+                    fields += ", "
+                if table_one.table not in tables_names:
+                    tables_names.append(table_one.table)
+                tables.append(str(relation["table_one"]))
+
+            if relation["table_two"] not in tables:
+                if fields != "":
+                    fields += ", "
+                if table_two.table not in tables_names:
+                    tables_names.append(table_two.table)
+                tables.append(str(relation["table_two"]))
+
+        for table_id in data['tables']:
+            if table_id not in tables:
+                if fields != "":
+                    fields += ", "
+                tables.append(table_id)
+                table = SynchronizedTables.objects.get(id=table_id)
+                tables_names.append(table.table)
+
+        fields_table = []
+        for field in data['fields']:
+            table = SynchronizedTables.objects.get(id=field["table"])
+            fields_table.append(
+                "{0}.{1}".format(table.table, field.get('Field'))
+            )
+        fields += ", ".join(map(str, fields_table))
+
+        if fields:
+            return "SELECT {0} FROM {1} {2}".format(fields, ", ".join(map(str, tables_names)), where)
+        else:
+            return None
+    except Exception as e:
+        print(e.__str__())
+        return {
+            "error": e.__str__()
+        }
+
+
+def create_table_virtual(instance):
+    connection_on_map = connect_with_on_map()
+    sql = ""
+    try:
+        cursor_on_map = connection_on_map.cursor()
+        sql = "DROP TABLE IF EXISTS {0}".format(instance.table)
+        cursor_on_map.execute(sql)
+        connection_on_map.commit()
+        fields_create = []
+        fields_table = []
+        for field in instance.fields:
+            char_null = "NOT NULL" if field.get("Null") == "NO" else ""
+            char_type = get_tipo_mysql_to_pg(field["Type"])
+            fields_create.append(
+                "{0} {1} {2}".format(field["alias"], char_type, char_null)
+            )
+            fields_table.append(
+                "{0}".format(field["alias"])
+            )
+        sql = "CREATE TABLE {0} ({1});".format(instance.table, ", ".join(map(str, fields_create)))
+        cursor_on_map.execute(sql)
+        connection_on_map.commit()
+        sql = "INSERT INTO {0} ({1}) {2}".format(
+            instance.table,
+            ", ".join(map(str, fields_table)),
+            instance.sql
+        )
+        cursor_on_map.execute(sql)
+        connection_on_map.commit()
+        connection_on_map.close()
+        return {
+            "sql": sql,
+            "fields_table": fields_table
+        }
+    except Exception as e:
+        return {
+            "sql": sql,
+            "fields_table": fields_table,
+            "error": e.__str__()
+        }
