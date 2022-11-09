@@ -6,7 +6,7 @@ from rest_framework import serializers
 from django.utils.translation import ugettext_lazy as _
 
 from ibartionmap.utils.functions import generate_virtual_sql
-from .models import SynchronizedTables, DataGroup, RelationsTable, get_table_repeat_number
+from .models import SynchronizedTables, DataGroup, RelationsTable, get_table_repeat_number, Marker
 
 
 class SynchronizedTablesSimpleDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
@@ -48,6 +48,28 @@ class RelationsTableDefaultSerializer(DynamicFieldsMixin, serializers.ModelSeria
         fields = serializers.ALL_FIELDS
 
 
+class MarkerDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
+    table = serializers.PrimaryKeyRelatedField(
+        queryset=SynchronizedTables.objects.all(),
+        required=True
+    )
+    tables = serializers.PrimaryKeyRelatedField(
+        queryset=SynchronizedTables.objects.all(),
+        many=True,
+        required=True
+    )
+
+    data_groups = serializers.SerializerMethodField(read_only=True)
+
+    def get_data_groups(self, marker: Marker):
+        request = self.context.get('request')
+        return DataGroupDefaultSerializer(DataGroup.objects.filter(table__in=marker.tables.all()), many=True).data
+
+    class Meta:
+        model = Marker
+        fields = serializers.ALL_FIELDS
+
+
 class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
     table_origin = serializers.CharField(required=False)
     table = serializers.CharField(required=False)
@@ -59,6 +81,7 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
         required=False
     )
     relations_table = RelationsCreateTableSerializer(many=True, required=False)
+    markers = MarkerDefaultSerializer(many=True, read_only=True)
 
     def get_data_groups(self, table: SynchronizedTables):
         request = self.context.get('request')
@@ -135,7 +158,7 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
     class Meta:
         model = SynchronizedTables
         fields = ('id', 'table_origin', 'table', 'alias', 'fields', 'connection_id', 'is_active', 'is_virtual',
-                  'data_groups', 'details', 'relations', 'relations_table', 'sql', 'tables',)
+                  'data_groups', 'details', 'relations', 'relations_table', 'sql', 'tables', 'markers',)
 
 
 class DataGroupDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
@@ -173,3 +196,4 @@ class DataGroupDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer
     class Meta:
         model = DataGroup
         fields = serializers.ALL_FIELDS
+

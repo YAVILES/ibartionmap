@@ -11,9 +11,9 @@ from rest_framework.viewsets import ModelViewSet
 from django_filters import rest_framework as filters
 
 from ibartionmap.utils.functions import connect_with_on_map, generate_virtual_sql, create_table_virtual
-from .models import SynchronizedTables, DataGroup, RelationsTable
+from .models import SynchronizedTables, DataGroup, RelationsTable, Marker
 from .serializers import SynchronizedTablesDefaultSerializer, DataGroupDefaultSerializer, \
-    RelationsTableDefaultSerializer, SynchronizedTablesSimpleDefaultSerializer
+    RelationsTableDefaultSerializer, SynchronizedTablesSimpleDefaultSerializer, MarkerDefaultSerializer
 from ..setting.models import Connection
 
 
@@ -290,3 +290,27 @@ class RelationsTableViewSet(ModelViewSet):
                 return Response(e, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response({"error": "the field parameter is mandatory"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class MarkerFilter(filters.FilterSet):
+    class Meta:
+        model = Marker
+        fields = ['table_id']
+
+
+class MarkerViewSet(ModelViewSet):
+    queryset = Marker.objects.all()
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_class = MarkerFilter
+    serializer_class = MarkerDefaultSerializer
+    permission_classes = (AllowAny,)
+    authentication_classes = []
+
+    def paginate_queryset(self, queryset):
+        """
+        Return a single page of results, or `None` if pagination is disabled.
+        """
+        not_paginator = self.request.query_params.get('not_paginator', None)
+        if self.paginator is None or not_paginator:
+            return None
+        return self.paginator.paginate_queryset(queryset, self.request, view=self)

@@ -8,11 +8,9 @@ import psycopg2
 import pymysql.cursors
 from constance import config
 from constance.backends.database.models import Constance
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import QuerySet
-from rest_framework import serializers
 
-from apps.setting.models import Connection
 from ibartionmap import settings
 import environ
 
@@ -210,7 +208,7 @@ def format_headers_import(headers, add_info=None):
     return headers
 
 
-def connect_with_mysql(instance: Connection):
+def connect_with_mysql(instance):
     connection = pymysql.connect(
         host=instance.host,
         user=instance.database_username,
