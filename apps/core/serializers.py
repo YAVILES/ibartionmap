@@ -80,6 +80,11 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
         many=True,
         required=False
     )
+    relations_display = RelationsTableDefaultSerializer(
+        many=True,
+        read_only=True,
+        source="relations"
+    )
     relations_table = RelationsCreateTableSerializer(many=True, required=False)
     markers = MarkerDefaultSerializer(many=True, read_only=True)
 
@@ -93,6 +98,21 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
                 raise serializers.ValidationError(detail={
                     'error': "Ya existe una tabla con este alias"
                 })
+
+        fields = attrs.get('fields', [])
+        if not fields:
+            raise serializers.ValidationError(detail={
+                'error': "Debe seleccionar al menos un campo"
+            })
+
+        fields_set = set()
+        fields_duplicates = {x for x in fields if x.get('Field') in fields_set or (fields_set.add(x.get('Field')) or False)}
+        print(fields_duplicates)
+        if list(fields_duplicates):
+            raise serializers.ValidationError(detail={
+                'error': "Existen nombres de campos duplicados",
+                'fields_duplicates': list(fields_duplicates)
+            })
         return attrs
 
     def create(self, validated_data):
@@ -157,8 +177,8 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
 
     class Meta:
         model = SynchronizedTables
-        fields = ('id', 'table_origin', 'table', 'alias', 'fields', 'connection_id', 'is_active', 'is_virtual',
-                  'data_groups', 'details', 'relations', 'relations_table', 'sql', 'tables', 'markers',)
+        fields = ('id', 'table_origin', 'table', 'alias', 'fields', 'connection_id', 'is_active', 'is_virtual', 'sql',
+                  'data_groups', 'details', 'relations', 'relations_table', 'relations_display',  'tables', 'markers',)
 
 
 class DataGroupDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):

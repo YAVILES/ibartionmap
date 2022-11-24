@@ -144,7 +144,8 @@ class SynchronizedTablesViewSet(ModelViewSet):
                 alias="",
                 fields=data["fields"],
                 is_virtual=True
-            )
+            ),
+            exclude=['details', 'sql']
         ).data
         result = []
         sql = generate_virtual_sql(data)
