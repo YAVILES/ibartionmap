@@ -8,7 +8,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from apps.core.models import SynchronizedTables
 from apps.setting.models import Connection
 from ibartionmap.utils.functions import connect_with_mysql, PythonObjectEncoder, get_name_table, connect_with_on_map, \
-    formatter_field, create_table_virtual
+    formatter_field, create_table_virtual, get_tipo_mysql_to_pg
 
 
 @shared_task(name="sync_with_connection")
@@ -21,7 +21,7 @@ def sync_with_connection(connection_id):
             connection_on_map = connect_with_on_map()
             with connection:
                 fields_table = []
-                for table_origin in instance.info_to_sync_selected:
+                for table_origin in list(set(instance.info_to_sync_selected)):
                     for info in instance.info_to_sync:
                         if info.get('table') == get_name_table(instance, table_origin):
                             fields_table = info.get('fields')
@@ -53,6 +53,25 @@ def sync_with_connection(connection_id):
                             data = json.loads(json.dumps(results, cls=PythonObjectEncoder))
                             try:
                                 cursor_on_map = connection_on_map.cursor()
+                                sql = "DROP TABLE IF EXISTS {0}".format(get_name_table(instance, table_origin))
+                                cursor_on_map.execute(sql)
+                                connection_on_map.commit()
+
+                                fields_create = []
+                                for field in fields_table:
+                                    char_null = "NOT NULL" if field.get("Null") == "NO" else ""
+                                    char_type = get_tipo_mysql_to_pg(field["Type"])
+                                    fields_create.append(
+                                        "{0} {1} {2}".format(field["Field"], char_type, char_null)
+                                    )
+                                sql = "CREATE TABLE {0} ({1});".format(
+                                    get_name_table(instance, table_origin),
+                                    ", ".join(map(str, fields_create))
+                                )
+
+                                cursor_on_map.execute(sql)
+                                connection_on_map.commit()
+
                                 sql = "INSERT INTO {0} ({1}) VALUES".format(
                                     get_name_table(instance, table_origin),
                                     ", ".join(map(str, data[0].keys()))
