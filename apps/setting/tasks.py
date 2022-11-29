@@ -20,6 +20,7 @@ def sync_with_connection(connection_id):
             connection = connect_with_mysql(instance)
             connection_on_map = connect_with_on_map()
             with connection:
+                fields_table = []
                 for table_origin in instance.info_to_sync_selected:
                     for info in instance.info_to_sync:
                         if info.get('table') == get_name_table(instance, table_origin):
