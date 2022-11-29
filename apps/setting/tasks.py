@@ -51,7 +51,7 @@ def sync_with_connection(connection_id):
                             results = cursor.fetchall()
                             data = json.loads(json.dumps(results, cls=PythonObjectEncoder))
                             try:
-                                cursor_on_map = connection_on_map.cursor(
+                                cursor_on_map = connection_on_map.cursor()
                                     
                                 try:
                                     sql = "DELETE FROM " + get_name_table(instance, table_origin)
