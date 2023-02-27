@@ -20,7 +20,7 @@ from ..setting.models import Connection
 class SynchronizedTablesFilter(filters.FilterSet):
     class Meta:
         model = SynchronizedTables
-        fields = ['table', 'alias', 'is_active', 'connection_id', 'is_virtual']
+        fields = ['table_origin', 'table', 'alias', 'is_active', 'connection_id', 'is_virtual']
 
 
 class SynchronizedTablesViewSet(ModelViewSet):

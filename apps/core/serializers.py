@@ -106,12 +106,12 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
             })
 
         fields_set = set()
-        fields_duplicates = {x for x in fields if x.get('Field') in fields_set or (fields_set.add(x.get('Field')) or False)}
-        print(fields_duplicates)
-        if list(fields_duplicates):
+        fields_duplicates = [x for x in fields if x.get('alias') in list(fields_set) or (fields_set.add(x.get('alias')) or False)]
+        # print(fields_duplicates)
+        if fields_duplicates:
             raise serializers.ValidationError(detail={
                 'error': "Existen nombres de campos duplicados",
-                'fields_duplicates': list(fields_duplicates)
+                'fields_duplicates': fields_duplicates
             })
         return attrs
 

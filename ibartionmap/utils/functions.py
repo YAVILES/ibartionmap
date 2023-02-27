@@ -320,7 +320,7 @@ def generate_virtual_sql(data):
         for field in data['fields']:
             table = SynchronizedTables.objects.get(id=field["table"])
             fields_table.append(
-                "{0}.{1}".format(table.table, field.get('Field'))
+                "{0}.{1} AS {2}".format(table.table, field.get('Field'), field.get('alias'))
             )
         fields += ", ".join(map(str, fields_table))
 
