@@ -100,7 +100,7 @@ def post_save_connection(sender, instance: Connection, **kwargs):
         SynchronizedTables.objects.filter(
             connection_id=instance.id
         ).exclude(
-            table__in=instance.info_to_sync_selected
+            table_origin__in=instance.info_to_sync_selected
         ).update(is_active=False)
         if instance.type == Connection.DB and instance.info_to_sync_selected:
             try:
