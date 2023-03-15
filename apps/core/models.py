@@ -200,6 +200,7 @@ class Marker(ModelBase):
         (FIELD, _('Campo')),
         (ICON_MAPS, _('Icono Maps')),
     )
+    name = models.CharField(max_length=250, verbose_name=_('name'), default='Marcador')
     table = models.ForeignKey(
         SynchronizedTables,
         verbose_name=_('table'),
