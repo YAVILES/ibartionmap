@@ -148,7 +148,7 @@ class SynchronizedTablesViewSet(ModelViewSet):
             exclude=['details', 'sql']
         ).data
         result = []
-        sql = generate_virtual_sql(data)
+        sql = generate_virtual_sql(data, 10)
         if sql:
             try:
                 connection_on_map = connect_with_on_map()

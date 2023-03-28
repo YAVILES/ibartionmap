@@ -272,7 +272,7 @@ def formatter_field(field):
         return "'{0}'".format(field)
 
 
-def generate_virtual_sql(data):
+def generate_virtual_sql(data, limit=None):
     from apps.core.models import SynchronizedTables
     tables = []
     tables_names = []
@@ -325,7 +325,10 @@ def generate_virtual_sql(data):
         fields += ", ".join(map(str, fields_table))
 
         if fields:
-            return "SELECT {0} FROM {1} {2}".format(fields, ", ".join(map(str, tables_names)), where)
+            sql = "SELECT {0} FROM {1} {2}".format(fields, ", ".join(map(str, tables_names)), where)
+            if limit != None:
+                sql += " LIMIT {0}".format(limit)
+            return sql
         else:
             return None
     except Exception as e:
