@@ -87,10 +87,15 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
     )
     relations_table = RelationsCreateTableSerializer(many=True, required=False)
     markers = MarkerDefaultSerializer(many=True, read_only=True)
+    details = serializers.SerializerMethodField(read_only=True)
 
     def get_data_groups(self, table: SynchronizedTables):
         request = self.context.get('request')
         return DataGroupDefaultSerializer(DataGroup.objects.filter(table_id=table.id), many=True).data
+
+    def get_details(self, table: SynchronizedTables):
+        request = self.context.get('request')
+        return table.details(request.query_params.get('search', None), request.user)
 
     def validate(self, attrs):
         if attrs.get('is_virtual', False):

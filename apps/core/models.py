@@ -122,17 +122,23 @@ class SynchronizedTables(ModelBase):
     def __str__(self):
         return self.table + ", " + str(self.alias) + " (" + str(self.id) + ")"
 
-    @cached_property
-    def details(self):
+    def details(self, search=None, user=None):
         from ibartionmap.utils.functions import connect_with_on_map
-        # search = self.request.query_params.get('search', None)
 
-        data = []
+        # if search:
+        #     if not search.islower():
+        #         search = search.lower()
+
         connection_on_map = connect_with_on_map()
         if self.is_virtual:
             fields = [field["alias"] for field in self.fields]
             cursor = connection_on_map.cursor(cursor_factory=RealDictCursor)
             sql = "SELECT {0} FROM {1}".format(", ".join(map(str, fields)), self.table)
+            if search:
+                sql += " WHERE "
+                for index, field in enumerate(fields, start=1):
+                    sql += " {0} LIKE '%{1}%' {2} ".format(field, search, "" if index == len(fields) else "OR")
+                print(sql)
             try:
                 cursor.execute(sql)
                 data = cursor.fetchall()
@@ -144,13 +150,19 @@ class SynchronizedTables(ModelBase):
             connection_on_map = connect_with_on_map()
             cursor = connection_on_map.cursor(cursor_factory=RealDictCursor)
             sql = "SELECT {0} FROM {1}".format(", ".join(map(str, fields)), self.table)
+
+            if search:
+                sql += " WHERE "
+                for index, field in enumerate(fields, start=1):
+                    sql += " {0} LIKE '%{1}%' {2} ".format(field, search, "" if index == len(fields) else "OR")
+
             cursor.execute(sql)
             try:
                 data = cursor.fetchall()
             except Exception as e:
                 print(e.__str__())
                 data = []
-                
+
         connection_on_map.close()
         return data
 
@@ -214,6 +226,7 @@ class Marker(ModelBase):
     )
     field_latitude = models.JSONField(verbose_name=_('property latitude'), default=dict)
     field_longitude = models.JSONField(verbose_name=_('property longitude'), default=dict)
+    group_by_field = models.JSONField(verbose_name=_('group by field'), default=dict)
     type_icon = models.SmallIntegerField(choices=TYPES_ICON, default=URL, verbose_name=_('type icon'))
     field_icon = models.JSONField(verbose_name=_('field icon'), default=dict)
     url_icon = models.TextField(verbose_name=_('url icon'), default=None, null=True)

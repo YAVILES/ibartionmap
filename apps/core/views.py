@@ -30,7 +30,7 @@ class SynchronizedTablesViewSet(ModelViewSet):
     serializer_class = SynchronizedTablesDefaultSerializer
     permission_classes = (AllowAny,)
     authentication_classes = []
-    search_fields = ['table', 'alias', 'table_origin']
+    # search_fields = ['table', 'alias', 'table_origin', 'details']
 
     def get_queryset(self):
         queryset = self.queryset

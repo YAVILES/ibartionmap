@@ -56,7 +56,9 @@ def sync_with_connection(connection_id):
                                 try:
                                     sql = "DELETE FROM " + get_name_table(instance, table_origin)
                                     cursor_on_map.execute(sql)
-                                except:
+                                    print(sql)
+                                except Exception as e:
+                                    print(e.__str__())
                                     pass
 
                                 sql = "INSERT INTO {0} ({1}) VALUES".format(
