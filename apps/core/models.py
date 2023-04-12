@@ -206,14 +206,14 @@ class RelationsTable(ModelBase):
 
 
 class Marker(ModelBase):
-    URL = 1
+    ICON_MAPS = 1
     FIELD = 2
-    ICON_MAPS = 3
+    URL = 3
 
     TYPES_ICON = (
-        (URL, _('Url')),
-        (FIELD, _('Campo')),
         (ICON_MAPS, _('Icono Maps')),
+        (FIELD, _('Campo')),
+        (URL, _('Url')),
     )
     name = models.CharField(max_length=250, verbose_name=_('name'), default='Marcador')
     table = models.ForeignKey(
@@ -230,7 +230,7 @@ class Marker(ModelBase):
     field_latitude = models.JSONField(verbose_name=_('property latitude'), default=dict)
     field_longitude = models.JSONField(verbose_name=_('property longitude'), default=dict)
     group_by_field = models.JSONField(verbose_name=_('group by field'), default=dict)
-    type_icon = models.SmallIntegerField(choices=TYPES_ICON, default=URL, verbose_name=_('type icon'))
+    type_icon = models.SmallIntegerField(choices=TYPES_ICON, default=ICON_MAPS, verbose_name=_('type icon'))
     field_icon = models.JSONField(verbose_name=_('field icon'), default=dict)
     url_icon = models.TextField(verbose_name=_('url icon'), default=None, null=True)
     maps_icon = models.CharField(max_length=255, verbose_name=_('maps icon'), default=None, null=True)

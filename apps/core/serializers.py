@@ -51,12 +51,12 @@ class RelationsTableDefaultSerializer(DynamicFieldsMixin, serializers.ModelSeria
 class MarkerDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
     table = serializers.PrimaryKeyRelatedField(
         queryset=SynchronizedTables.objects.all(),
-        required=True
+        required=False
     )
     tables = serializers.PrimaryKeyRelatedField(
         queryset=SynchronizedTables.objects.all(),
         many=True,
-        required=True
+        required=False
     )
 
     data_groups = serializers.SerializerMethodField(read_only=True)
@@ -98,7 +98,7 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
         return table.details(request.query_params.get('search', None), request.user)
 
     def validate(self, attrs):
-        if attrs.get('is_virtual', False):
+        if attrs.get('is_virtual', False) and attrs.get('alias', False):
             if SynchronizedTables.objects.filter(alias=attrs['alias']).exists():
                 raise serializers.ValidationError(detail={
                     'error': "Ya existe una tabla con este alias"
@@ -161,10 +161,10 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
                     validated_data['table'] += "{0}".format(
                         table.table_origin
                     )
-                if validated_data.get('is_virtual', False):
+                if validated_data.get('is_virtual', None) and validated_data.get('relations_table', None):
                     validated_data['sql'] = generate_virtual_sql(validated_data)
                     relations = []
-                    RelationsTable.objects.filter(id__in=[rel.id for rel in instance.relations]).delete()
+                    RelationsTable.objects.filter(id__in=[rel.id for rel in instance.relations.all()]).delete()
                     for relation in validated_data.pop('relations_table', []):
                         rel = RelationsTable.objects.create(
                             table_one_id=relation["table_one"],
