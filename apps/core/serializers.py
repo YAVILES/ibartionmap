@@ -2,7 +2,6 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
 from django_restql.mixins import DynamicFieldsMixin
 from rest_framework import serializers
-from django.utils.translation import ugettext_lazy as _
 
 from ibartionmap.utils.functions import generate_virtual_sql
 from .models import SynchronizedTables, RelationsTable, get_table_repeat_number, Marker
@@ -113,10 +112,6 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
         try:
             with transaction.atomic():
                 validated_data['table'] = ""
-                for table in validated_data.get('tables', []):
-                    validated_data['table'] += "{0}".format(
-                        table.table_origin
-                    )
 
                 try:
                     SynchronizedTables.objects.get(table=validated_data['table'])
@@ -172,4 +167,4 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
     class Meta:
         model = SynchronizedTables
         fields = ('id', 'table_origin', 'table', 'alias', 'fields', 'connection_id', 'is_active', 'is_virtual', 'sql',
-                  'data_groups', 'details', 'relations', 'relations_table', 'relations_display',  'tables', 'markers',)
+                  'data_groups', 'details', 'relations', 'relations_table', 'relations_display', 'markers',)
