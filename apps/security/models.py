@@ -7,7 +7,7 @@ from django.utils.functional import cached_property
 from django.utils.translation import ugettext_lazy as _
 
 # Create your models here.
-from apps.core.models import ModelBase, DataGroup
+from apps.core.models import ModelBase
 
 
 class UserManager(BaseUserManager):
@@ -87,12 +87,6 @@ class User(AbstractBaseUser, PermissionsMixin, ModelBase):
     point = geo_models.PointField(verbose_name=_('point'), null=True)
     security_code = models.CharField(null=True, max_length=20, verbose_name=_('security_code'))
     photo = models.ImageField(upload_to='photos/', null=True)
-    data_groups = models.ManyToManyField(
-        DataGroup,
-        related_name=_('data_groups'),
-        verbose_name=_('data groups'),
-        blank=True
-    )
     status = models.SmallIntegerField(choices=STATUS, default=ACTIVE, verbose_name=_('status'))
     is_verified = models.BooleanField(null=True, verbose_name=_('is verified'), default=False)
     is_verified_security_code = models.BooleanField(null=True, verbose_name=_('is verified security_code'),

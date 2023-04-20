@@ -11,9 +11,9 @@ from rest_framework.viewsets import ModelViewSet
 from django_filters import rest_framework as filters
 
 from ibartionmap.utils.functions import connect_with_on_map, generate_virtual_sql, create_table_virtual
-from .models import SynchronizedTables, DataGroup, RelationsTable, Marker
-from .serializers import SynchronizedTablesDefaultSerializer, DataGroupDefaultSerializer, \
-    RelationsTableDefaultSerializer, SynchronizedTablesSimpleDefaultSerializer, MarkerDefaultSerializer
+from .models import SynchronizedTables, RelationsTable, Marker
+from .serializers import SynchronizedTablesDefaultSerializer, RelationsTableDefaultSerializer, \
+    SynchronizedTablesSimpleDefaultSerializer, MarkerDefaultSerializer
 from ..setting.models import Connection
 
 
@@ -181,61 +181,6 @@ class SynchronizedTablesViewSet(ModelViewSet):
             return Response(result, status=status.HTTP_200_OK)
         except Exception as e:
             return Response(e.__str__(), status=status.HTTP_400_BAD_REQUEST)
-
-
-class DataGroupFilter(filters.FilterSet):
-    class Meta:
-        model = DataGroup
-        fields = ['description', 'table']
-
-
-class DataGroupViewSet(ModelViewSet):
-    queryset = DataGroup.objects.all()
-    filter_backends = [DjangoFilterBackend, SearchFilter]
-    filterset_class = DataGroupFilter
-    serializer_class = DataGroupDefaultSerializer
-    permission_classes = (AllowAny,)
-    authentication_classes = []
-
-    def paginate_queryset(self, queryset):
-        """
-        Return a single page of results, or `None` if pagination is disabled.
-        """
-        not_paginator = self.request.query_params.get('not_paginator', None)
-        if self.paginator is None or not_paginator:
-            return None
-        return self.paginator.paginate_queryset(queryset, self.request, view=self)
-
-    @action(methods=['GET'], detail=False)
-    def field_options(self, request):
-        field = self.request.query_params.get('field', None)
-        fields = self.request.query_params.getlist('fields', None)
-        if fields:
-            try:
-                data = {}
-                for field in fields:
-                    data[field] = []
-                    for c in DataGroup._meta.get_field(field).choices:
-                        data[field].append({
-                            "value": c[0],
-                            "description": c[1]
-                        })
-                return Response(data, status=status.HTTP_200_OK)
-            except ValueError as e:
-                return Response(e, status=status.HTTP_400_BAD_REQUEST)
-        elif field:
-            try:
-                choices = []
-                for c in DataGroup._meta.get_field(field).choices:
-                    choices.append({
-                        "value": c[0],
-                        "description": c[1]
-                    })
-                return Response(choices, status=status.HTTP_200_OK)
-            except ValueError as e:
-                return Response(e, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response({"error": "the field parameter is mandatory"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class RelationsTableFilter(filters.FilterSet):

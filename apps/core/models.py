@@ -1,11 +1,9 @@
-import json
 import uuid
 
 from django.db.models.signals import post_save, post_delete
 from psycopg2.extras import RealDictCursor
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
-from django.utils.functional import cached_property
 from sequences import get_next_value
 
 from ibartionmap.utils.functions import connect_with_on_map
@@ -62,14 +60,6 @@ def map_virtual(table_id, data, fields, table_geo_id, property_latitude, propert
 
         if property_icon and property_icon in list(d.keys()):
             obj[property_icon] = d[property_icon]
-
-        # if user:
-        #     if user.is_superuser:
-        for data_group in DataGroup.objects.filter(table_id=table_id):
-            for field in data_group.properties:
-                property_field = field.get('Field')
-                if property_field and property_field in list(d.keys()):
-                    obj[property_field] = d[property_field]
 
     except KeyError:
         obj['point'] = None
@@ -170,21 +160,6 @@ class SynchronizedTables(ModelBase):
         return data
 
 
-class DataGroup(ModelBase):
-    description = models.CharField(max_length=100, verbose_name=_('description'), unique=True)
-    properties = models.JSONField(default=list)
-    table = models.ForeignKey(
-        SynchronizedTables,
-        verbose_name=_('table'),
-        on_delete=models.PROTECT,
-        blank=True,
-        null=True
-    )
-
-    def __str__(self):
-        return self.description + " (" + str(self.id) + ")"
-
-
 class RelationsTable(ModelBase):
     table_one = models.ForeignKey(
         SynchronizedTables,
@@ -222,11 +197,6 @@ class Marker(ModelBase):
         related_name=_('markers'),
         on_delete=models.CASCADE,
     )
-    tables = models.ManyToManyField(
-        SynchronizedTables,
-        verbose_name=_('tables'),
-        related_name=_('markers_list'),
-    )
     field_latitude = models.JSONField(verbose_name=_('property latitude'), default=dict)
     field_longitude = models.JSONField(verbose_name=_('property longitude'), default=dict)
     group_by_field = models.JSONField(verbose_name=_('group by field'), default=dict)
@@ -234,6 +204,7 @@ class Marker(ModelBase):
     field_icon = models.JSONField(verbose_name=_('field icon'), default=dict)
     url_icon = models.TextField(verbose_name=_('url icon'), default=None, null=True)
     maps_icon = models.CharField(max_length=255, verbose_name=_('maps icon'), default=None, null=True)
+    data_groups = models.JSONField(verbose_name=_('data groups'), default=list)
 
 
 def post_save_synchronized_table(sender, instance: SynchronizedTables, **kwargs):
