@@ -51,11 +51,6 @@ class MarkerDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
         queryset=SynchronizedTables.objects.all(),
         required=False
     )
-    tables = serializers.PrimaryKeyRelatedField(
-        queryset=SynchronizedTables.objects.all(),
-        many=True,
-        required=False
-    )
 
     class Meta:
         model = Marker
