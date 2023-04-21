@@ -106,6 +106,10 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
         try:
             with transaction.atomic():
                 validated_data['table'] = ""
+                for table in validated_data.get('tables', []):
+                    validated_data['table'] += "{0}".format(
+                        table.table_origin
+                    )
 
                 try:
                     SynchronizedTables.objects.get(table=validated_data['table'])
@@ -161,4 +165,4 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
     class Meta:
         model = SynchronizedTables
         fields = ('id', 'table_origin', 'table', 'alias', 'fields', 'connection_id', 'is_active', 'is_virtual', 'sql',
-                  'details', 'relations', 'relations_table', 'relations_display', 'markers',)
+                  'details', 'relations', 'relations_table', 'relations_display', 'tables', 'markers',)
