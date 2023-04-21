@@ -341,13 +341,13 @@ def generate_virtual_sql(data, limit=None):
 def create_table_virtual(instance):
     connection_on_map = connect_with_on_map()
     sql = ""
+    fields_table = []
     try:
         cursor_on_map = connection_on_map.cursor()
         sql = "DROP TABLE IF EXISTS {0}".format(instance.table)
         cursor_on_map.execute(sql)
         connection_on_map.commit()
         fields_create = []
-        fields_table = []
         for field in instance.fields:
             char_null = "NOT NULL" if field.get("Null") == "NO" else ""
             char_type = get_tipo_mysql_to_pg(field["Type"])
