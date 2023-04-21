@@ -165,4 +165,4 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
     class Meta:
         model = SynchronizedTables
         fields = ('id', 'table_origin', 'table', 'alias', 'fields', 'connection_id', 'is_active', 'is_virtual', 'sql',
-                  'tables', 'details', 'relations', 'relations_table', 'relations_display', 'markers',)
+                  'details', 'relations', 'relations_table', 'relations_display', 'tables', 'markers',)
