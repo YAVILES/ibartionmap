@@ -61,7 +61,6 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
     table_origin = serializers.CharField(required=False)
     table = serializers.CharField(required=False)
     alias = serializers.CharField(required=False)
-    data_groups = serializers.SerializerMethodField(read_only=True)
     relations = serializers.PrimaryKeyRelatedField(
         queryset=RelationsTable.objects.all(),
         many=True,
@@ -162,4 +161,4 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
     class Meta:
         model = SynchronizedTables
         fields = ('id', 'table_origin', 'table', 'alias', 'fields', 'connection_id', 'is_active', 'is_virtual', 'sql',
-                  'data_groups', 'details', 'relations', 'relations_table', 'relations_display', 'markers',)
+                  'details', 'relations', 'relations_table', 'relations_display', 'markers',)

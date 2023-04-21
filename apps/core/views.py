@@ -36,10 +36,7 @@ class SynchronizedTablesViewSet(ModelViewSet):
         queryset = self.queryset
         user = self.request.user
         if not user.is_anonymous:
-            if user.is_superuser:
-                return queryset
-            else:
-                return queryset.filter(id__in=user.data_groups.all().values_list('table__id', flat=True))
+            return queryset
 
         return queryset
 
