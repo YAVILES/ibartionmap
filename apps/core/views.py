@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from django_filters import rest_framework as filters
 
-from ibartionmap.utils.functions import connect_with_on_map, generate_virtual_sql, create_table_virtual
+from ibartionmap.utils.functions import connect_with_on_map, generate_virtual_sql, create_table_virtual, get_name_table
 from .models import SynchronizedTables, RelationsTable, Marker
 from .serializers import SynchronizedTablesDefaultSerializer, RelationsTableDefaultSerializer, \
     SynchronizedTablesSimpleDefaultSerializer, MarkerDefaultSerializer
@@ -106,7 +106,7 @@ class SynchronizedTablesViewSet(ModelViewSet):
                 )
             except ObjectDoesNotExist:
                 for info in connection.info_to_sync:
-                    if info.get('table') == table:
+                    if info.get('table') == get_name_table(table):
                         fields = info.get('fields')
                         break
                 if fields is None:

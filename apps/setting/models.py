@@ -84,7 +84,7 @@ def post_save_connection(sender, instance: Connection, **kwargs):
                     synchronized_table.save(update_fields=['is_active'])
             except ObjectDoesNotExist:
                 for info in instance.info_to_sync:
-                    if info.get('table') == get_name_table(table_origin):
+                    if info.get('table_origin') == table_origin:
                         fields = info.get('fields')
                         for field in fields:
                             field["selected"] = False
