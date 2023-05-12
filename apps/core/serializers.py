@@ -91,15 +91,16 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
             raise serializers.ValidationError(detail={
                 'error': "Debe seleccionar al menos un campo"
             })
+        if attrs.get('is_virtual', False):
+            fields_set = set()
+            fields_duplicates = [x for x in fields if x.get('alias') in list(fields_set) or (fields_set.add(x.get('alias')) or False)]
+            # print(fields_duplicates)
+            if fields_duplicates:
+                raise serializers.ValidationError(detail={
+                    'error': "Existen nombres de campos duplicados",
+                    'fields_duplicates': fields_duplicates
+                })
 
-        fields_set = set()
-        fields_duplicates = [x for x in fields if x.get('alias') in list(fields_set) or (fields_set.add(x.get('alias')) or False)]
-        # print(fields_duplicates)
-        if fields_duplicates:
-            raise serializers.ValidationError(detail={
-                'error': "Existen nombres de campos duplicados",
-                'fields_duplicates': fields_duplicates
-            })
         return attrs
 
     def create(self, validated_data):
