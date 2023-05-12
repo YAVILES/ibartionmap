@@ -118,8 +118,6 @@ class SynchronizedTablesViewSet(ModelViewSet):
                     table=table,
                     alias="",
                     fields=fields,
-                    property_latitude=None,
-                    property_longitude=None,
                     is_virtual=False,
                     connection=connection
                 )
