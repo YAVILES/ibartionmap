@@ -127,7 +127,7 @@ class SynchronizedTables(ModelBase):
             if search:
                 sql += " WHERE "
                 for index, field in enumerate(fields, start=1):
-                    sql += " {0} LIKE '%{1}%' {2} ".format(field, search, "" if index == len(fields) else "OR")
+                    sql += " {0}::TEXT LIKE '%{1}%' {2} ".format(field, search, "" if index == len(fields) else "OR")
                 print(sql)
             try:
                 cursor.execute(sql)
