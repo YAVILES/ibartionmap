@@ -112,7 +112,7 @@ class SynchronizedTables(ModelBase):
     def __str__(self):
         return self.table + ", " + str(self.alias) + " (" + str(self.id) + ")"
 
-    def details(self, search=None, user=None):
+    def details(self, search=None, filters=None, user=None):
         from ibartionmap.utils.functions import connect_with_on_map
 
         # if search:
@@ -124,11 +124,22 @@ class SynchronizedTables(ModelBase):
             fields = [field["alias"] for field in self.fields]
             cursor = connection_on_map.cursor(cursor_factory=RealDictCursor)
             sql = "SELECT {0} FROM {1}".format(", ".join(map(str, fields)), self.table)
-            if search:
+            if search or filters:
                 sql += " WHERE "
+
+            if search:
                 for index, field in enumerate(fields, start=1):
-                    sql += " {0}::TEXT LIKE '%{1}%' {2} ".format(field, search, "" if index == len(fields) else "OR")
-                print(sql)
+                    if index == 1:
+                        sql += " ("
+                    sql += " {0}::TEXT iLIKE '%{1}%' {2} ".format(field, search, ") " if index == len(fields) else "OR")
+
+            print('filters: ', filters)
+            if filters:
+                for index, filterKey in enumerate(filters, start=1):
+                    if index == 1 and search:
+                        sql += " AND "
+                    sql += " {0} = ANY(ARRAY{1}) {2} ".format(filterKey['key'], filterKey['values'], "" if index == len(filters) else "AND")
+
             try:
                 cursor.execute(sql)
                 data = cursor.fetchall()
