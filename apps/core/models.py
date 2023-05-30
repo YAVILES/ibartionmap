@@ -120,41 +120,43 @@ class SynchronizedTables(ModelBase):
         #         search = search.lower()
 
         connection_on_map = connect_with_on_map()
+        data = []
         if self.is_virtual:
-            fields = [field["alias"] for field in self.fields]
-            cursor = connection_on_map.cursor(cursor_factory=RealDictCursor)
-            sql = "SELECT {0} FROM {1}".format(", ".join(map(str, fields)), self.table)
-            if search:
-                sql += " WHERE "
-                for index, field in enumerate(fields, start=1):
-                    sql += " {0} LIKE '%{1}%' {2} ".format(field, search, "" if index == len(fields) else "OR")
-                print(sql)
-            try:
-                cursor.execute(sql)
-                data = cursor.fetchall()
-            except Exception as e:
-                print(e.__str__())
-                data = []
-        else:
-            fields = [field["Field"] for field in self.fields if field.get("selected") is True]
-            connection_on_map = connect_with_on_map()
-            cursor = connection_on_map.cursor(cursor_factory=RealDictCursor)
-            if fields:
+            if self.table:
+                fields = [field["alias"] for field in self.fields]
+                cursor = connection_on_map.cursor(cursor_factory=RealDictCursor)
                 sql = "SELECT {0} FROM {1}".format(", ".join(map(str, fields)), self.table)
-
                 if search:
                     sql += " WHERE "
                     for index, field in enumerate(fields, start=1):
                         sql += " {0} LIKE '%{1}%' {2} ".format(field, search, "" if index == len(fields) else "OR")
-
-                cursor.execute(sql)
                 try:
+                    cursor.execute(sql)
                     data = cursor.fetchall()
                 except Exception as e:
                     print(e.__str__())
                     data = []
-            else:
-                data = []
+        else:
+            if self.table:
+                fields = [field["Field"] for field in self.fields if field.get("selected") is True]
+                connection_on_map = connect_with_on_map()
+                cursor = connection_on_map.cursor(cursor_factory=RealDictCursor)
+                if fields:
+                    sql = "SELECT {0} FROM {1}".format(", ".join(map(str, fields)), self.table)
+
+                    if search:
+                        sql += " WHERE "
+                        for index, field in enumerate(fields, start=1):
+                            sql += " {0} LIKE '%{1}%' {2} ".format(field, search, "" if index == len(fields) else "OR")
+
+                    cursor.execute(sql)
+                    try:
+                        data = cursor.fetchall()
+                    except Exception as e:
+                        print(e.__str__())
+                        data = []
+                else:
+                    data = []
 
         connection_on_map.close()
         return data
