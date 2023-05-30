@@ -74,6 +74,11 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
     relations_table = RelationsCreateTableSerializer(many=True, required=False)
     markers = MarkerDefaultSerializer(many=True, read_only=True)
     details = serializers.SerializerMethodField(read_only=True)
+    tables = serializers.PrimaryKeyRelatedField(
+        queryset=SynchronizedTables.objects.all(),
+        many=True,
+        required=False
+    )
 
     def get_details(self, table: SynchronizedTables):
         request = self.context.get('request')
