@@ -98,7 +98,7 @@ class SynchronizedTablesViewSet(ModelViewSet):
                 synchronized_table = SynchronizedTables.objects.get(
                     Q(
                         Q(connection_id=connection) | Q(is_virtual=True)
-                    ) & Q(table=table)
+                    ) & Q(table_origin=table)
                 )
                 return Response(
                     SynchronizedTablesSimpleDefaultSerializer(synchronized_table).data,

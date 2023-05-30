@@ -75,7 +75,7 @@ def sync_with_connection(connection_id):
                                     "fields_table": fields_table,
                                     "error": e.__str__()
                                 }
-                for table in SynchronizedTables.objects.filter(is_virtual=True):
+                for table in SynchronizedTables.objects.filter(is_virtual=True, is_active=True):
                     create_table_virtual(table)
             connection_on_map.close()
     except ValueError as e:
