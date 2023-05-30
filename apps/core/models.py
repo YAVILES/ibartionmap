@@ -121,6 +121,7 @@ class SynchronizedTables(ModelBase):
 
         connection_on_map = connect_with_on_map()
         data = []
+        print(self.is_virtual)
         if self.is_virtual:
             if self.table:
                 fields = [field["alias"] for field in self.fields]
@@ -135,7 +136,7 @@ class SynchronizedTables(ModelBase):
                             sql += " ("
                         sql += " {0}::TEXT iLIKE '%{1}%' {2} ".format(field, search, ") " if index == len(fields) else "OR")
 
-                if filters:
+                if filters and filters != 'null':
                     for index, filterKey in enumerate(filters, start=1):
                         if index == 1 and search:
                             sql += " AND "
