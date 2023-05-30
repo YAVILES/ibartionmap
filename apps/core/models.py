@@ -145,8 +145,8 @@ class SynchronizedTables(ModelBase):
                     cursor.execute(sql)
                     data = cursor.fetchall()
                 except Exception as e:
-                print(e.__str__())
-                data = []
+                    print(e.__str__())
+                    data = []
         else:
             if self.table:
                 fields = [field["Field"] for field in self.fields if field.get("selected") is True]
