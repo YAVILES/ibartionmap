@@ -98,8 +98,7 @@ class ConnectionViewSet(ModelViewSet):
                                 cursorTablas.execute(sql)
                                 fields = cursorTablas.fetchall()
                                 result.append({
-                                    "table": get_name_table(instance, table),
-                                    "table_origin": table,
+                                    "table": table,
                                     "fields": list(fields)
                                 })
                             except Exception as e:
@@ -113,6 +112,7 @@ class ConnectionViewSet(ModelViewSet):
                     connection_on_map = connect_with_on_map()
                     cursor = connection_on_map.cursor()
                     for data in result:
+                        table_name = get_name_table(instance, table)
                         fields_table = []
                         for field in data["fields"]:
                             if field["Field"].startswith("MAX("):
@@ -122,22 +122,22 @@ class ConnectionViewSet(ModelViewSet):
                             fields_table.append(
                                 "{0} {1} {2}".format(field["Field"], char_type, char_null)
                             )
-                        sql = "DROP TABLE IF EXISTS {0}".format(data["table"])
+                        sql = "DROP TABLE IF EXISTS {0}".format(table_name)
                         cursor.execute(sql)
                         connection_on_map.commit()
-                        sql = "CREATE TABLE {0} ({1});".format(data["table"], ", ".join(map(str, fields_table)))
+                        sql = "CREATE TABLE {0} ({1});".format(table_name, ", ".join(map(str, fields_table)))
                         cursor.execute(sql)
                         connection_on_map.commit()
                         try:
                             synchronized_table = SynchronizedTables.objects.get(
-                                table_origin=data["table_origin"], connection_id=instance.id
+                                table=table_name, connection_id=instance.id
                             )
                             synchronized_table.fields = list(data["fields"])
                             synchronized_table.save(update_fields=['fields'])
                         except ObjectDoesNotExist:
                             SynchronizedTables.objects.create(
-                                table_origin=data["table_origin"],
-                                table=data["table"],
+                                table_origin=data["table"],
+                                table=table_name,
                                 alias="",
                                 fields=data["fields"],
                                 is_virtual=False,
@@ -152,7 +152,7 @@ class ConnectionViewSet(ModelViewSet):
                     }, status=status.HTTP_400_BAD_REQUEST)
                 instance.info_to_sync = result
                 instance.save(update_fields=["info_to_sync"])
-            result = sync_with_connection(instance.id)
+            # result = sync_with_connection(instance.id)
             return Response(result, status=status.HTTP_200_OK)
         except Exception as e:
             return Response(e.__str__(), status=status.HTTP_400_BAD_REQUEST)
