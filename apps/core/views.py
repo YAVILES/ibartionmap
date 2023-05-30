@@ -107,6 +107,8 @@ class SynchronizedTablesViewSet(ModelViewSet):
             except ObjectDoesNotExist:
                 for info in connection.info_to_sync:
                     if info.get('table') == table:
+                        for field in info.get('fields'):
+                            field['selected'] = True
                         fields = info.get('fields')
                         break
                 if fields is None:

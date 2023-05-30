@@ -23,6 +23,8 @@ def sync_with_connection(connection_id):
                 for table_origin in instance.info_to_sync_selected:
                     for info in instance.info_to_sync:
                         if info.get('table') == table_origin:
+                            for field in info.get('fields'):
+                                field['selected'] = True
                             fields_table = info.get('fields')
                             for field in fields_table:
                                 field["selected"] = False
