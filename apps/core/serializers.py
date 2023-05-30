@@ -1,3 +1,5 @@
+import json
+
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
 from django_restql.mixins import DynamicFieldsMixin
@@ -82,7 +84,18 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
 
     def get_details(self, table: SynchronizedTables):
         request = self.context.get('request')
-        return table.details(request.query_params.get('search', None), request.user)
+        filters = None
+        query_filters = request.query_params.get('filters', None)
+
+        if query_filters and query_filters != 'null':
+            filter = next(
+                (obj for obj in json.loads(query_filters) if obj['table_id'] == str(table.id)),
+                None
+            )
+            if filter:
+                filters = filter['filters']
+
+        return table.details(request.query_params.get('search', None), filters, request.user)
 
     def validate(self, attrs):
         if attrs.get('is_virtual', False) and attrs.get('alias', False):
@@ -98,7 +111,8 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
             })
         if attrs.get('is_virtual', False):
             fields_set = set()
-            fields_duplicates = [x for x in fields if x.get('alias') in list(fields_set) or (fields_set.add(x.get('alias')) or False)]
+            fields_duplicates = [x for x in fields if
+                                 x.get('alias') in list(fields_set) or (fields_set.add(x.get('alias')) or False)]
             # print(fields_duplicates)
             if fields_duplicates:
                 raise serializers.ValidationError(detail={
