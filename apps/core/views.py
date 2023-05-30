@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from django_filters import rest_framework as filters
 
-from ibartionmap.utils.functions import connect_with_on_map, generate_virtual_sql, create_table_virtual
+from ibartionmap.utils.functions import connect_with_on_map, generate_virtual_sql, create_table_virtual, get_name_table
 from .models import SynchronizedTables, RelationsTable, Marker
 from .serializers import SynchronizedTablesDefaultSerializer, RelationsTableDefaultSerializer, \
     SynchronizedTablesSimpleDefaultSerializer, MarkerDefaultSerializer
@@ -98,7 +98,7 @@ class SynchronizedTablesViewSet(ModelViewSet):
                 synchronized_table = SynchronizedTables.objects.get(
                     Q(
                         Q(connection_id=connection) | Q(is_virtual=True)
-                    ) & Q(table=table)
+                    ) & Q(table_origin=table)
                 )
                 return Response(
                     SynchronizedTablesSimpleDefaultSerializer(synchronized_table).data,
@@ -115,8 +115,8 @@ class SynchronizedTablesViewSet(ModelViewSet):
                         status=status.HTTP_400_BAD_REQUEST
                     )
                 synchronized_table = SynchronizedTables.objects.create(
-                    table_origin=info.get('table_origin'),
-                    table=table,
+                    table_origin=info.get('table'),
+                    table=get_name_table(connection, table),
                     alias="",
                     fields=fields,
                     is_virtual=False,

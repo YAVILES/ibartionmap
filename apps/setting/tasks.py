@@ -22,7 +22,7 @@ def sync_with_connection(connection_id):
             with connection:
                 for table_origin in instance.info_to_sync_selected:
                     for info in instance.info_to_sync:
-                        if info.get('table') == get_name_table(instance, table_origin):
+                        if info.get('table') == table_origin:
                             fields_table = info.get('fields')
                             for field in fields_table:
                                 field["selected"] = False
@@ -80,3 +80,4 @@ def sync_with_connection(connection_id):
             connection_on_map.close()
     except ValueError as e:
         print(e.__str__())
+
