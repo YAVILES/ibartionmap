@@ -98,7 +98,7 @@ class SynchronizedTablesViewSet(ModelViewSet):
                 synchronized_table = SynchronizedTables.objects.get(
                     Q(
                         Q(connection_id=connection) | Q(is_virtual=True)
-                    ) & Q(table_origin=table)
+                    ) & Q(table=table)
                 )
                 return Response(
                     SynchronizedTablesSimpleDefaultSerializer(synchronized_table).data,
@@ -115,6 +115,7 @@ class SynchronizedTablesViewSet(ModelViewSet):
                         status=status.HTTP_400_BAD_REQUEST
                     )
                 synchronized_table = SynchronizedTables.objects.create(
+                    table_origin=info.get('table_origin'),
                     table=table,
                     alias="",
                     fields=fields,
