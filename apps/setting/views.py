@@ -112,7 +112,7 @@ class ConnectionViewSet(ModelViewSet):
                     connection_on_map = connect_with_on_map()
                     cursor = connection_on_map.cursor()
                     for data in result:
-                        table_name = get_name_table(instance, table)
+                        table_name = get_name_table(instance, data['table'])
                         fields_table = []
                         for field in data["fields"]:
                             if field["Field"].startswith("MAX("):
