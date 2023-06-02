@@ -72,6 +72,8 @@ def sync_with_connection(connection_id):
                                 cursor_on_map.execute(sql)
                                 connection_on_map.commit()
                             except Exception as e:
+                                cursor_on_map.execute("rollback")
+                                connection_on_map.commit()
                                 return {
                                     "sql": sql,
                                     "fields_table": fields_table,
