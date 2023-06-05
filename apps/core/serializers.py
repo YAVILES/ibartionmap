@@ -6,7 +6,7 @@ from django_restql.mixins import DynamicFieldsMixin
 from rest_framework import serializers
 
 from ibartionmap.utils.functions import generate_virtual_sql
-from .models import SynchronizedTables, RelationsTable, get_table_repeat_number, Marker
+from .models import SynchronizedTables, RelationsTable, get_table_repeat_number, Marker, Line
 
 
 class SynchronizedTablesSimpleDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
@@ -48,11 +48,19 @@ class RelationsTableDefaultSerializer(DynamicFieldsMixin, serializers.ModelSeria
         fields = serializers.ALL_FIELDS
 
 
+class LineMarkerDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
+
+    class Meta:
+        model = Line
+        fields = serializers.ALL_FIELDS
+
+
 class MarkerDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
     table = serializers.PrimaryKeyRelatedField(
         queryset=SynchronizedTables.objects.all(),
         required=False
     )
+    origin_lines = LineMarkerDefaultSerializer(many=True, read_only=True)
 
     class Meta:
         model = Marker
@@ -188,3 +196,16 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
         model = SynchronizedTables
         fields = ('id', 'table_origin', 'table', 'alias', 'fields', 'connection_id', 'is_active', 'is_virtual', 'sql',
                   'details', 'relations', 'relations_table', 'relations_display', 'tables', 'markers',)
+
+
+class LineDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
+    origin_marker = serializers.PrimaryKeyRelatedField(
+        queryset=SynchronizedTables.objects.all()
+    )
+    destination_marker = serializers.PrimaryKeyRelatedField(
+        queryset=SynchronizedTables.objects.all()
+    )
+
+    class Meta:
+        model = Line
+        fields = serializers.ALL_FIELDS

@@ -219,6 +219,22 @@ class Marker(ModelBase):
     data_groups = models.JSONField(verbose_name=_('data groups'), default=list)
 
 
+class Line(ModelBase):
+    origin_marker = models.ForeignKey(
+        Marker,
+        verbose_name=_('origin marker'),
+        related_name=_('origin_lines'),
+        on_delete=models.CASCADE,
+    )
+    destination_marker = models.ForeignKey(
+        Marker,
+        verbose_name=_('origin marker'),
+        related_name=_('destination_lines'),
+        on_delete=models.CASCADE,
+    )
+    field = models.JSONField(verbose_name=_('line field'), default=dict)
+
+
 def post_save_synchronized_table(sender, instance: SynchronizedTables, **kwargs):
     from ibartionmap.utils.functions import create_table_virtual
     if instance.is_virtual:
