@@ -158,11 +158,13 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
     def update(self, instance, validated_data):
         try:
             with transaction.atomic():
-                validated_data['table'] = ""
-                for table in validated_data.get('tables', []):
-                    validated_data['table'] += "{0}".format(
-                        table.table_origin
-                    )
+                if instance.is_virtual:
+                    validated_data['table'] = ""
+                    for table in validated_data.get('tables', []):
+                        validated_data['table'] += "{0}".format(
+                            table.table_origin
+                        )
+
                 if validated_data.get('is_virtual', None) and validated_data.get('relations_table', None):
                     validated_data['sql'] = generate_virtual_sql(validated_data)
                     relations = []
