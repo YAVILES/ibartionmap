@@ -240,6 +240,7 @@ class Line(ModelBase):
         on_delete=models.CASCADE,
     )
     field = models.JSONField(verbose_name=_('line field'), default=dict)
+    color = models.CharField(max_length=20, verbose_name=_('line color'), default=None)
 
 
 def post_save_synchronized_table(sender, instance: SynchronizedTables, **kwargs):
