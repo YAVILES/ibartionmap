@@ -200,10 +200,10 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
 
 class LineDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
     origin_marker = serializers.PrimaryKeyRelatedField(
-        queryset=SynchronizedTables.objects.all()
+        queryset=Marker.objects.all()
     )
     destination_marker = serializers.PrimaryKeyRelatedField(
-        queryset=SynchronizedTables.objects.all()
+        queryset=Marker.objects.all()
     )
 
     class Meta:
