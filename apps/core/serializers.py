@@ -199,6 +199,9 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
 
 
 class LineDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
+    table = serializers.PrimaryKeyRelatedField(
+        queryset=SynchronizedTables.objects.all()
+    )
     origin_marker = serializers.PrimaryKeyRelatedField(
         queryset=Marker.objects.all()
     )
