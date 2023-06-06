@@ -202,11 +202,23 @@ class LineDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
     table = serializers.PrimaryKeyRelatedField(
         queryset=SynchronizedTables.objects.filter(is_virtual=True)
     )
+    table_display = SynchronizedTablesSimpleDefaultSerializer(
+        read_only=True,
+        source="table"
+    )
     origin_marker = serializers.PrimaryKeyRelatedField(
         queryset=Marker.objects.all()
     )
+    origin_marker_display = MarkerDefaultSerializer(
+        read_only=True,
+        source="origin_marker"
+    )
     destination_marker = serializers.PrimaryKeyRelatedField(
         queryset=Marker.objects.all()
+    )
+    destination_marker_display = MarkerDefaultSerializer(
+        read_only=True,
+        source="destination_marker"
     )
 
     class Meta:
