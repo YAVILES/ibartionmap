@@ -220,6 +220,13 @@ class Marker(ModelBase):
 
 
 class Line(ModelBase):
+    table = models.ForeignKey(
+        SynchronizedTables,
+        verbose_name=_('table virtual'),
+        related_name=_('lines'),
+        on_delete=models.CASCADE,
+        default=None
+    )
     origin_marker = models.ForeignKey(
         Marker,
         verbose_name=_('origin marker'),

@@ -295,7 +295,7 @@ class MarkerViewSet(ModelViewSet):
 class LineFilter(filters.FilterSet):
     class Meta:
         model = Line
-        fields = ['origin_marker_id', 'destination_marker_id']
+        fields = ['table_id', 'origin_marker_id', 'destination_marker_id']
 
 
 class LineViewSet(ModelViewSet):
