@@ -89,6 +89,11 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
         many=True,
         required=False
     )
+    tables_display = SynchronizedTablesSimpleDefaultSerializer(
+        many=True,
+        read_only=True,
+        source="tables"
+    )
 
     def get_details(self, table: SynchronizedTables):
         request = self.context.get('request')
@@ -194,8 +199,9 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
 
     class Meta:
         model = SynchronizedTables
-        fields = ('id', 'table_origin', 'table', 'alias', 'fields', 'connection_id', 'is_active', 'is_virtual', 'sql',
-                  'details', 'relations', 'relations_table', 'relations_display', 'tables', 'markers',)
+        fields = ('id', 'table_origin', 'table', 'alias', 'fields', 'connection_id', 'is_active', 'relations_table',
+                  'is_virtual', 'markers', 'details', 'relations', 'relations_table', 'relations_display', 'sql',
+                  'tables', 'tables_display',)
 
 
 class LineDefaultSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
