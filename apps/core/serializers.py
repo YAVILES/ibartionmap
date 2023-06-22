@@ -178,10 +178,10 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
                             table.table_origin
                         )
 
+                RelationsTable.objects.filter(id__in=[rel.id for rel in instance.relations.all()]).delete()
                 if validated_data.get('is_virtual', None) and validated_data.get('relations_table', None):
                     validated_data['sql'] = generate_virtual_sql(validated_data)
                     relations = []
-                    RelationsTable.objects.filter(id__in=[rel.id for rel in instance.relations.all()]).delete()
                     for relation in validated_data.pop('relations_table', []):
                         rel = RelationsTable.objects.create(
                             table_one_id=relation["table_one"],
@@ -192,7 +192,7 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
                         relations.append(rel.id)
                     validated_data['relations'] = relations
                 synchronized_table = super(SynchronizedTablesDefaultSerializer, self).update(instance, validated_data)
-                return synchronized_table
+                return validated_data
         except ValidationError as error:
             raise serializers.ValidationError(detail={"error": error.messages})
         return instance

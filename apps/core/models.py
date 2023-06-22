@@ -121,7 +121,7 @@ class SynchronizedTables(ModelBase):
 
         connection_on_map = connect_with_on_map()
         data = []
-        print(self.is_virtual)
+
         if self.is_virtual:
             if self.table:
                 fields = [field["alias"] for field in self.fields]
