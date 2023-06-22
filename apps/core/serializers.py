@@ -192,7 +192,7 @@ class SynchronizedTablesDefaultSerializer(DynamicFieldsMixin, serializers.ModelS
                         relations.append(rel.id)
                     validated_data['relations'] = relations
                 synchronized_table = super(SynchronizedTablesDefaultSerializer, self).update(instance, validated_data)
-                return validated_data
+                return synchronized_table
         except ValidationError as error:
             raise serializers.ValidationError(detail={"error": error.messages})
         return instance
